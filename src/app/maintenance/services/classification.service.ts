@@ -169,6 +169,17 @@ export class ClassificationService {
     return this.http.get<Portfolio[]>(`${this.baseUrl}/system-config/tenants/${tenantId}/portfolios`);
   }
 
+  createPortfolio(data: {
+    tenantId: number;
+    portfolioCode: string;
+    portfolioName: string;
+    portfolioType?: string;
+    parentPortfolioId?: number;
+    description?: string;
+  }): Observable<Portfolio> {
+    return this.http.post<Portfolio>(`${this.baseUrl}/system-config/portfolios`, data);
+  }
+
   // Helper method to build tree structure
   buildClassificationTree(classifications: ClassificationCatalog[]): any[] {
     const map = new Map<number, any>();

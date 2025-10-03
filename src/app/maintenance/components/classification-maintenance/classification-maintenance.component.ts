@@ -12,11 +12,12 @@ import {
 } from '../../models/classification.model';
 import { Portfolio } from '../../models/portfolio.model';
 import { Tenant } from '../../models/tenant.model';
+import { PortfolioFormDialogComponent } from '../portfolio-form-dialog/portfolio-form-dialog.component';
 
 @Component({
   selector: 'app-classification-maintenance',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, PortfolioFormDialogComponent],
   templateUrl: './classification-maintenance.component.html',
   styleUrls: ['./classification-maintenance.component.scss']
 })
@@ -27,6 +28,7 @@ export class ClassificationMaintenanceComponent implements OnInit {
 
   loading = signal(false);
   showSuccess = signal(false);
+  showPortfolioDialog = signal(false);
   classificationTypes = Object.values(ClassificationType);
   classifications: ClassificationCatalog[] = [];
   tenantConfigs: TenantClassificationConfig[] = [];
@@ -243,6 +245,25 @@ export class ClassificationMaintenanceComponent implements OnInit {
 
   toggleDarkMode() {
     this.themeService.toggleTheme();
+  }
+
+  openCreatePortfolioDialog() {
+    this.showPortfolioDialog.set(true);
+  }
+
+  closePortfolioDialog() {
+    this.showPortfolioDialog.set(false);
+  }
+
+  onPortfolioCreated(portfolio: Portfolio) {
+    this.showPortfolioDialog.set(false);
+    this.showSuccessMessage();
+    // Reload portfolios to include the newly created one
+    this.loadPortfolios();
+  }
+
+  getSelectedTenant(): Tenant | undefined {
+    return this.tenants.find(t => t.id === this.selectedTenantId);
   }
 
   showSuccessMessage() {

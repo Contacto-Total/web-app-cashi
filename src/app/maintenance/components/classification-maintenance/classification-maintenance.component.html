@@ -112,8 +112,16 @@
           </div>
         </div>
 
-        <!-- Expand/Collapse -->
-        <div class="flex gap-1">
+        <!-- Actions -->
+        <div class="flex gap-2">
+          @if (selectedTenantId) {
+            <button
+              (click)="openCreatePortfolioDialog()"
+              class="px-3 py-1 text-[10px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold transition-colors flex items-center gap-1">
+              <lucide-angular name="plus" [size]="12"></lucide-angular>
+              Nueva Cartera
+            </button>
+          }
           <button
             (click)="expandAll()"
             class="px-2 py-1 text-[10px] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded transition-colors font-semibold">
@@ -128,6 +136,16 @@
       </div>
     </div>
   </div>
+
+  <!-- Portfolio Creation Dialog -->
+  @if (showPortfolioDialog()) {
+    <app-portfolio-form-dialog
+      [selectedTenant]="getSelectedTenant()"
+      [portfolios]="portfolios"
+      (save)="onPortfolioCreated($event)"
+      (cancel)="closePortfolioDialog()">
+    </app-portfolio-form-dialog>
+  }
 
   <!-- Loading State -->
   @if (loading()) {
