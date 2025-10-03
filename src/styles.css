@@ -1,1 +1,223 @@
-/* You can add global styles to this file, and also import other style files */
+@import "tailwindcss";
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+@import url('https://fonts.googleapis.com/css2?family=Material+Icons');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+html, body {
+  height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Forzar estilos base para modo claro */
+:root {
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
+}
+
+/* SOLUCIÓN DEFINITIVA: Deshabilitar TODAS las clases dark: cuando NO hay .dark en el HTML */
+/* Esto sobrescribe el comportamiento de Tailwind v4 que usa prefers-color-scheme */
+@media (prefers-color-scheme: dark) {
+  /* Para cada elemento que NO esté dentro de .dark, desactivar las utilidades dark: de Tailwind */
+  :root:not(.dark) {
+    color-scheme: light !important;
+  }
+
+  /* La clave es NO sobrescribir con inherit, sino NO aplicar nada */
+  /* Cuando prefers-color-scheme es dark PERO no hay .dark en HTML */
+  /* Tailwind aplica las reglas dark: automáticamente */
+  /* Necesitamos revertirlas a los valores ORIGINALES del modo claro */
+
+  /* Para fondos: usar tonos beige suaves para evitar cansancio visual */
+  :root:not(.dark) .bg-white { background-color: #fafaf9 !important; } /* Beige muy suave (stone-50) */
+
+  /* Barra de info del cliente en blanco para mejor contraste */
+  :root:not(.dark) .border-blue-400 { background-color: #ffffff !important; } /* Blanco puro */
+  :root:not(.dark) .bg-slate-50 { background-color: #fafaf9 !important; } /* Beige uniforme */
+  :root:not(.dark) .bg-blue-50 { background-color: #eff6ff !important; } /* blue-50 original */
+
+  /* Forzar gradiente azul claro en la barra */
+  :root:not(.dark) .from-blue-50 { --tw-gradient-from: #dbeafe !important; }
+  :root:not(.dark) .bg-gray-50 { background-color: #fafaf8 !important; } /* Beige suave */
+  :root:not(.dark) .bg-green-50 { background-color: #f0fdf4 !important; }
+  :root:not(.dark) .bg-red-50 { background-color: #fef2f2 !important; }
+  :root:not(.dark) .bg-orange-50 { background-color: #fff7ed !important; }
+  :root:not(.dark) .bg-amber-50 { background-color: #fffbeb !important; }
+  :root:not(.dark) .bg-amber-400 { background-color: #fbbf24 !important; }
+  :root:not(.dark) .bg-blue-100 { background-color: #dbeafe !important; }
+
+  /* Desactivar gradientes en modo claro - usar color beige uniforme */
+  :root:not(.dark) .from-slate-50,
+  :root:not(.dark) .from-blue-100,
+  :root:not(.dark) .to-blue-50,
+  :root:not(.dark) .via-blue-50,
+  :root:not(.dark) .to-slate-100 {
+    --tw-gradient-from: #fafaf9 !important;
+    --tw-gradient-via: #fafaf9 !important;
+    --tw-gradient-to: #fafaf9 !important;
+  }
+
+  /* Para gradientes de fondo */
+  :root:not(.dark) .bg-gradient-to-r,
+  :root:not(.dark) .bg-gradient-to-br {
+    /* Mantener el gradiente pero asegurar colores claros */
+  }
+
+  /* Forzar colores de texto claros */
+  :root:not(.dark) .text-gray-800 { color: #1f2937 !important; }
+  :root:not(.dark) .text-gray-900 { color: #111827 !important; }
+  :root:not(.dark) .text-slate-900 { color: #0f172a !important; }
+  :root:not(.dark) .text-slate-800 { color: #1e293b !important; }
+  :root:not(.dark) .text-slate-600 { color: #475569 !important; }
+  :root:not(.dark) .text-gray-700 { color: #374151 !important; }
+  :root:not(.dark) .text-gray-600 { color: #4b5563 !important; }
+  :root:not(.dark) .text-blue-700 { color: #1d4ed8 !important; }
+  :root:not(.dark) .text-blue-800 { color: #1e40af !important; }
+  :root:not(.dark) .text-blue-900 { color: #1e3a8a !important; }
+  :root:not(.dark) .text-green-700 { color: #15803d !important; }
+  :root:not(.dark) .text-green-800 { color: #166534 !important; }
+  :root:not(.dark) .text-green-900 { color: #14532d !important; }
+  :root:not(.dark) .text-red-700 { color: #b91c1c !important; }
+  :root:not(.dark) .text-red-800 { color: #991b1b !important; }
+  :root:not(.dark) .text-red-900 { color: #7f1d1d !important; }
+  :root:not(.dark) .text-red-600 { color: #dc2626 !important; }
+  :root:not(.dark) .text-orange-600 { color: #ea580c !important; }
+  :root:not(.dark) .text-purple-600 { color: #9333ea !important; }
+  :root:not(.dark) .text-amber-600 { color: #d97706 !important; }
+
+  /* Forzar bordes claros */
+  :root:not(.dark) .border-gray-200 { border-color: #e5e7eb !important; }
+  :root:not(.dark) .border-blue-400 { border-color: #60a5fa !important; }
+  :root:not(.dark) .border-blue-200 { border-color: #bfdbfe !important; }
+  :root:not(.dark) .border-gray-300 { border-color: #d1d5db !important; }
+  :root:not(.dark) .border-slate-200 { border-color: #e2e8f0 !important; }
+  :root:not(.dark) .border-green-200 { border-color: #bbf7d0 !important; }
+  :root:not(.dark) .border-red-200 { border-color: #fecaca !important; }
+  :root:not(.dark) .border-red-300 { border-color: #fca5a5 !important; }
+  :root:not(.dark) .border-orange-200 { border-color: #fed7aa !important; }
+  :root:not(.dark) .border-amber-300 { border-color: #fcd34d !important; }
+  :root:not(.dark) .border-purple-300 { border-color: #d8b4fe !important; }
+
+  /* CRÍTICO: Forzar color de texto en inputs, selects y textareas */
+  /* Sobrescribir todas las clases dark:text- en inputs */
+  :root:not(.dark) input,
+  :root:not(.dark) select,
+  :root:not(.dark) textarea,
+  :root:not(.dark) input[type="text"],
+  :root:not(.dark) input[type="number"],
+  :root:not(.dark) input[type="date"],
+  :root:not(.dark) input.text-gray-700,
+  :root:not(.dark) select.text-gray-700,
+  :root:not(.dark) textarea.text-gray-700 {
+    color: #1f2937 !important; /* gray-800 - MÁS OSCURO para mejor contraste */
+  }
+
+  /* Sobrescribir específicamente cuando tienen clases dark: */
+  :root:not(.dark) input[class*="dark:text-"],
+  :root:not(.dark) select[class*="dark:text-"],
+  :root:not(.dark) textarea[class*="dark:text-"] {
+    color: #111827 !important; /* gray-900 - NEGRO casi */
+  }
+
+  /* Forzar color de options en selects */
+  :root:not(.dark) option {
+    color: #111827 !important; /* gray-900 */
+    background-color: #ffffff !important;
+  }
+
+  /* Placeholder también debe ser visible */
+  :root:not(.dark) input::placeholder,
+  :root:not(.dark) textarea::placeholder {
+    color: #6b7280 !important; /* gray-500 - más oscuro */
+    opacity: 1 !important;
+  }
+
+  /* Forzar todos los elementos con text-gray-700 y dark:text-* */
+  :root:not(.dark) .text-gray-700[class*="dark:text-"] {
+    color: #1f2937 !important; /* gray-800 */
+  }
+
+  /* Para cualquier elemento que tenga dark:text-gray-200 u otro */
+  :root:not(.dark) [class*="dark:text-gray-200"],
+  :root:not(.dark) [class*="dark:text-gray-100"],
+  :root:not(.dark) [class*="dark:text-gray-300"] {
+    color: #1f2937 !important; /* Forzar gris oscuro */
+  }
+
+  /* Sobrescribir hover backgrounds oscuros cuando NO hay .dark */
+  :root:not(.dark) .dark\:hover\:bg-gray-800:hover {
+    background-color: #f9fafb !important; /* gray-50 en lugar de gray-800 */
+  }
+
+  :root:not(.dark) .dark\:hover\:bg-gray-700:hover {
+    background-color: #f3f4f6 !important; /* gray-100 en lugar de gray-700 */
+  }
+
+  :root:not(.dark) .dark\:hover\:bg-blue-600:hover {
+    background-color: inherit !important; /* No aplicar hover oscuro */
+  }
+
+  :root:not(.dark) .dark\:hover\:bg-yellow-500\/30:hover {
+    background-color: inherit !important; /* No aplicar hover oscuro */
+  }
+
+  /* Asegurar que los botones tengan el texto en blanco SIEMPRE visible en modo claro */
+  :root:not(.dark) button.text-white,
+  :root:not(.dark) button .text-white {
+    color: #ffffff !important;
+  }
+
+  /* También asegurar que los fondos de botones sean sólidos */
+  :root:not(.dark) button.from-green-600 { background-color: #16a34a !important; }
+  :root:not(.dark) button.from-red-600 { background-color: #dc2626 !important; }
+  :root:not(.dark) button.from-blue-600 { background-color: #2563eb !important; }
+  :root:not(.dark) button.from-gray-400 { background-color: #9ca3af !important; }
+
+  /* Asegurar que el header oscuro mantenga su fondo en modo claro */
+  :root:not(.dark) .from-slate-900 {
+    --tw-gradient-from: #0f172a !important;
+  }
+  :root:not(.dark) .via-blue-900 {
+    --tw-gradient-via: #1e3a8a !important;
+  }
+  :root:not(.dark) .to-slate-900 {
+    --tw-gradient-to: #0f172a !important;
+  }
+
+  /* Asegurar que los textos del header sean claros en modo claro (header tiene fondo oscuro) */
+  :root:not(.dark) .bg-gradient-to-r.from-slate-900 .text-blue-200,
+  :root:not(.dark) .bg-gradient-to-r.from-slate-900 .text-slate-300 {
+    color: #bfdbfe !important;
+  }
+
+  /* Asegurar que dark:text-white NO se aplique en modo claro en elementos que NO son botones */
+  /* Solo en la barra de info del cliente (border-b.border-blue-400) */
+  :root:not(.dark) .border-b.border-blue-400 [class*="dark:text-white"]:not(button):not(button *) {
+    color: inherit !important;
+  }
+
+  /* Forzar fondos claros en modo claro para las tarjetas del historial */
+  :root:not(.dark) .bg-gray-50.dark\:bg-gray-800 {
+    background-color: #f9fafb !important; /* gray-50 */
+  }
+
+  :root:not(.dark) .bg-gray-200.dark\:bg-gray-700 {
+    background-color: #e5e7eb !important; /* gray-200 */
+  }
+
+  :root:not(.dark) .bg-white.dark\:bg-gray-900 {
+    background-color: #ffffff !important; /* white */
+  }
+}

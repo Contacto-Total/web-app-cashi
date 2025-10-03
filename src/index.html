@@ -5,7 +5,33 @@
   <title>Cashi</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script>
+    // EJECUTAR ANTES de que se cargue CUALQUIER CSS
+    // Verificar si hay tema guardado en localStorage
+    const savedTheme = localStorage.getItem('theme');
+
+    // Solo aplicar clase dark si está explícitamente guardado como 'dark'
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.querySelector('meta[name="color-scheme"]').setAttribute('content', 'dark');
+    } else {
+      // Asegurarse que NO tenga la clase dark
+      document.documentElement.classList.remove('dark');
+      document.querySelector('meta[name="color-scheme"]').setAttribute('content', 'light');
+    }
+  </script>
+  <style>
+    /* Forzar que los estilos dark solo se apliquen con la clase .dark */
+    @media (prefers-color-scheme: dark) {
+      html:not(.dark) {
+        color-scheme: light !important;
+      }
+    }
+  </style>
 </head>
 <body>
   <app-root></app-root>

@@ -1,0 +1,80 @@
+mat-dialog-content {
+  min-width: 500px;
+  max-height: 70vh;
+  overflow-y: auto;
+
+  mat-tab-group {
+    margin-top: 16px;
+  }
+
+  .catalog-form,
+  .config-form {
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .full-width {
+      width: 100%;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+
+      .half-width {
+        flex: 1;
+      }
+    }
+
+    .parent-info {
+      background: #e3f2fd;
+      padding: 12px;
+      border-radius: 4px;
+      margin-top: 8px;
+
+      p {
+        margin: 4px 0;
+        font-size: 14px;
+      }
+    }
+
+    .validation-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e0e0e0;
+
+      h3 {
+        margin: 0 0 16px 0;
+        font-size: 16px;
+        font-weight: 500;
+      }
+
+      mat-checkbox {
+        margin-bottom: 16px;
+      }
+    }
+  }
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  margin: 0;
+}
+
+// Dark mode
+@media (prefers-color-scheme: dark) {
+  mat-dialog-content {
+    .catalog-form,
+    .config-form {
+      .parent-info {
+        background: #263238;
+      }
+
+      .validation-section {
+        border-top-color: #424242;
+      }
+    }
+  }
+}
