@@ -155,7 +155,7 @@
 
   <!-- Classification Form Dialog -->
   @if (showClassificationDialog()) {
-    <app-classification-form-dialog-v2
+    <app-classification-form-dialog
       [mode]="classificationDialogMode()"
       [classification]="selectedClassificationForEdit()"
       [parentClassification]="parentClassificationForCreate()"
@@ -164,7 +164,7 @@
       [portfolioId]="selectedPortfolioId"
       (save)="onClassificationSaved($event)"
       (cancel)="closeClassificationDialog()">
-    </app-classification-form-dialog-v2>
+    </app-classification-form-dialog>
   }
 
   <!-- Loading State -->

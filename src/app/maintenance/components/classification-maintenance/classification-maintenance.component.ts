@@ -13,12 +13,12 @@ import {
 import { Portfolio } from '../../models/portfolio.model';
 import { Tenant } from '../../models/tenant.model';
 import { PortfolioFormDialogComponent } from '../portfolio-form-dialog/portfolio-form-dialog.component';
-import { ClassificationFormDialogV2Component } from '../classification-form-dialog-v2/classification-form-dialog-v2.component';
+import { ClassificationFormDialogComponent } from '../classification-form-dialog/classification-form-dialog.component';
 
 @Component({
   selector: 'app-classification-maintenance',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, PortfolioFormDialogComponent, ClassificationFormDialogV2Component],
+  imports: [CommonModule, FormsModule, LucideAngularModule, PortfolioFormDialogComponent, ClassificationFormDialogComponent],
   templateUrl: './classification-maintenance.component.html',
   styleUrls: ['./classification-maintenance.component.scss']
 })
