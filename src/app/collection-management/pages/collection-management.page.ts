@@ -129,40 +129,40 @@ import { ApiSystemConfigService } from '../services/api-system-config.service';
         </div>
       </div>
 
+      <!-- TEMPORAL: Filtros de Tenant y Portfolio - ABSOLUTE POSITION FLOTANTE para fácil eliminación -->
+      <!-- TODO: ELIMINAR ESTE BLOQUE COMPLETO CUANDO SE MUEVA LA LÓGICA AL LOGIN -->
+      @if (tenants.length > 0 || portfolios.length > 0) {
+        <div class="fixed top-16 left-4 z-50 flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-500 dark:border-yellow-600 px-3 py-2 rounded-lg shadow-xl text-[10px]">
+          <span class="text-yellow-800 dark:text-yellow-200 font-bold">⚠️ TEMP - Testing Only:</span>
+
+          @if (tenants.length > 0) {
+            <select
+              [(ngModel)]="selectedTenantId"
+              (change)="onTenantChange()"
+              class="text-[10px] font-semibold text-gray-900 dark:text-white bg-white dark:bg-slate-800 border border-gray-400 dark:border-gray-600 rounded px-2 py-1 cursor-pointer shadow-sm">
+              <option *ngFor="let tenant of tenants" [ngValue]="tenant.id">
+                Cliente: {{ tenant.tenantName }}
+              </option>
+            </select>
+          }
+
+          @if (portfolios.length > 0) {
+            <select
+              [(ngModel)]="selectedPortfolioId"
+              (change)="onPortfolioChange()"
+              class="text-[10px] font-semibold text-gray-900 dark:text-white bg-white dark:bg-slate-800 border border-gray-400 dark:border-gray-600 rounded px-2 py-1 cursor-pointer shadow-sm">
+              <option [ngValue]="undefined">Cartera: Todas</option>
+              <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id">
+                Cartera: {{ portfolio.portfolioName }}
+              </option>
+            </select>
+          }
+        </div>
+      }
+
       <!-- Barra de Info Cliente - ULTRA COMPACTA -->
       <div class="bg-white dark:bg-slate-900 border-b border-blue-400 dark:border-slate-700 shadow-sm relative overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-r from-blue-50 dark:from-blue-950/50 to-transparent opacity-50"></div>
-
-        <!-- TEMPORAL: Filtros de Tenant y Portfolio - ABSOLUTE POSITION para fácil eliminación -->
-        @if (tenants.length > 0 || portfolios.length > 0) {
-          <div class="absolute top-1 left-3 z-10 flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-600 px-2 py-0.5 rounded text-[9px]">
-            <span class="text-yellow-800 dark:text-yellow-200 font-bold">TEMP - Testing Only:</span>
-
-            @if (tenants.length > 0) {
-              <select
-                [(ngModel)]="selectedTenantId"
-                (change)="onTenantChange()"
-                class="text-[9px] font-semibold text-gray-800 dark:text-white bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 cursor-pointer">
-                <option *ngFor="let tenant of tenants" [ngValue]="tenant.id">
-                  Cliente: {{ tenant.tenantName }}
-                </option>
-              </select>
-            }
-
-            @if (portfolios.length > 0) {
-              <select
-                [(ngModel)]="selectedPortfolioId"
-                (change)="onPortfolioChange()"
-                class="text-[9px] font-semibold text-gray-800 dark:text-white bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 cursor-pointer">
-                <option [ngValue]="undefined">Cartera: Todas</option>
-                <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id">
-                  Cartera: {{ portfolio.portfolioName }}
-                </option>
-              </select>
-            }
-          </div>
-        }
-
         <div class="relative px-3 py-1">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3 text-xs">
