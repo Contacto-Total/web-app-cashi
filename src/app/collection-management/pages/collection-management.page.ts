@@ -39,6 +39,10 @@ import { ThemeService } from '../../shared/services/theme.service';
 import { ManagementClassification } from '../models/system-config.model';
 import { CustomerData } from '../models/customer.model';
 import { ManagementForm, ValidationErrors } from '../models/management.model';
+import { Tenant } from '../../maintenance/models/tenant.model';
+import { Portfolio } from '../../maintenance/models/portfolio.model';
+import { ClassificationService } from '../../maintenance/services/classification.service';
+import { ApiSystemConfigService } from '../services/api-system-config.service';
 
 @Component({
   selector: 'app-collection-management',
@@ -130,6 +134,40 @@ import { ManagementForm, ValidationErrors } from '../models/management.model';
         <div class="absolute inset-0 bg-gradient-to-r from-blue-50 dark:from-blue-950/50 to-transparent opacity-50"></div>
         <div class="relative px-3 py-1">
           <div class="flex items-center justify-between">
+            <!-- Filtros de Tenant y Portfolio -->
+            <div class="flex items-center gap-3 text-xs">
+              <!-- Tenant/Client Filter -->
+              <div>
+                <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold">Cliente</div>
+                <select
+                  [(ngModel)]="selectedTenantId"
+                  (change)="onTenantChange()"
+                  class="text-xs font-semibold text-gray-800 dark:text-white bg-transparent border-none focus:outline-none cursor-pointer">
+                  <option *ngFor="let tenant of tenants" [ngValue]="tenant.id" class="bg-white dark:bg-slate-800">
+                    {{ tenant.tenantName }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+
+              <!-- Portfolio Filter -->
+              <div>
+                <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold">Subcartera</div>
+                <select
+                  [(ngModel)]="selectedPortfolioId"
+                  (change)="onPortfolioChange()"
+                  class="font-semibold text-gray-800 dark:text-white text-[10px] bg-transparent border-none focus:outline-none cursor-pointer">
+                  <option [ngValue]="undefined" class="bg-white dark:bg-slate-800">Todas las Subcarteras</option>
+                  <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id" class="bg-white dark:bg-slate-800">
+                    {{ portfolio.portfolioName }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+            </div>
+
             <div class="flex items-center gap-3 text-xs">
               <div>
                 <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold flex items-center gap-0.5">
@@ -695,6 +733,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     duracion: string;
   }>>([]);
 
+  // Tenant and Portfolio selection
+  selectedTenantId?: number;
+  selectedPortfolioId?: number;
+  tenants: Tenant[] = [];
+  portfolios: Portfolio[] = [];
+
   // Computed signals
   campaign = computed(() => this.systemConfigService.getCampaign());
   contactClassifications = computed(() => this.systemConfigService.getContactClassifications());
@@ -776,12 +820,69 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   constructor(
     private systemConfigService: SystemConfigService,
     private managementService: ManagementService,
-    public themeService: ThemeService
+    public themeService: ThemeService,
+    private classificationService: ClassificationService,
+    private apiSystemConfigService: ApiSystemConfigService
   ) {}
 
   ngOnInit() {
+    // Cargar tenants y portfolios
+    this.loadTenants();
+
     // Cargar historial de gestiones del cliente desde el backend
     this.loadManagementHistory();
+  }
+
+  loadTenants() {
+    this.classificationService.getAllTenants().subscribe({
+      next: (data) => {
+        this.tenants = data;
+        if (data.length > 0) {
+          this.selectedTenantId = data[0].id;
+          this.onTenantChange();
+        }
+      },
+      error: (error) => {
+        console.error('❌ Error loading tenants:', error);
+      }
+    });
+  }
+
+  onTenantChange() {
+    this.selectedPortfolioId = undefined;
+    this.portfolios = [];
+
+    if (this.selectedTenantId) {
+      this.loadPortfolios();
+      this.reloadClassifications();
+    }
+  }
+
+  loadPortfolios() {
+    if (!this.selectedTenantId) return;
+
+    this.classificationService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
+      next: (data) => {
+        this.portfolios = data;
+      },
+      error: (error) => {
+        console.error('❌ Error loading portfolios:', error);
+      }
+    });
+  }
+
+  onPortfolioChange() {
+    this.reloadClassifications();
+  }
+
+  reloadClassifications() {
+    if (!this.selectedTenantId) return;
+
+    // Update tenant and portfolio context in ApiSystemConfigService
+    this.apiSystemConfigService.setTenantAndPortfolio(
+      this.selectedTenantId,
+      this.selectedPortfolioId
+    );
   }
 
   private loadManagementHistory() {
