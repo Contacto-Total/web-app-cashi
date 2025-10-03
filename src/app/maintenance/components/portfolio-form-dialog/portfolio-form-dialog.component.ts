@@ -52,10 +52,10 @@ interface PortfolioForm {
               [(ngModel)]="form.portfolioCode"
               placeholder="Ej: TRAMO-1, CART-A"
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
-              [class.border-red-500]="errors().portfolioCode"
+              [class.border-red-500]="errors()['portfolioCode']"
             />
-            @if (errors().portfolioCode) {
-              <p class="text-red-500 text-sm mt-1">{{ errors().portfolioCode }}</p>
+            @if (errors()['portfolioCode']) {
+              <p class="text-red-500 text-sm mt-1">{{ errors()['portfolioCode'] }}</p>
             }
           </div>
 
@@ -69,10 +69,10 @@ interface PortfolioForm {
               [(ngModel)]="form.portfolioName"
               placeholder="Ej: Tramo 1, Cartera A"
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
-              [class.border-red-500]="errors().portfolioName"
+              [class.border-red-500]="errors()['portfolioName']"
             />
-            @if (errors().portfolioName) {
-              <p class="text-red-500 text-sm mt-1">{{ errors().portfolioName }}</p>
+            @if (errors()['portfolioName']) {
+              <p class="text-red-500 text-sm mt-1">{{ errors()['portfolioName'] }}</p>
             }
           </div>
 

@@ -63,10 +63,10 @@ interface ClassificationForm {
               placeholder="Ej: CPC, ACP, PPR"
               maxlength="20"
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
-              [class.border-red-500]="errors().code"
+              [class.border-red-500]="errors()['code']"
             />
-            @if (errors().code) {
-              <p class="text-red-500 text-sm mt-1">{{ errors().code }}</p>
+            @if (errors()['code']) {
+              <p class="text-red-500 text-sm mt-1">{{ errors()['code'] }}</p>
             }
           </div>
 
@@ -81,10 +81,10 @@ interface ClassificationForm {
               placeholder="Ej: Contacto con Cliente, Promesa de Pago"
               maxlength="255"
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
-              [class.border-red-500]="errors().name"
+              [class.border-red-500]="errors()['name']"
             />
-            @if (errors().name) {
-              <p class="text-red-500 text-sm mt-1">{{ errors().name }}</p>
+            @if (errors()['name']) {
+              <p class="text-red-500 text-sm mt-1">{{ errors()['name'] }}</p>
             }
           </div>
 
@@ -97,7 +97,7 @@ interface ClassificationForm {
               [(ngModel)]="form.classificationType"
               [disabled]="isEditMode || !!defaultType"
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
-              [class.border-red-500]="errors().classificationType">
+              [class.border-red-500]="errors()['classificationType']">
               <option value="">-- Seleccionar --</option>
               <option [value]="ClassificationType.CONTACT_RESULT">Resultado de Contacto</option>
               <option [value]="ClassificationType.MANAGEMENT_TYPE">Tipo de Gestión</option>
@@ -105,8 +105,8 @@ interface ClassificationForm {
               <option [value]="ClassificationType.COMPLAINT_TYPE">Tipo de Reclamo</option>
               <option [value]="ClassificationType.CUSTOM">Personalizado</option>
             </select>
-            @if (errors().classificationType) {
-              <p class="text-red-500 text-sm mt-1">{{ errors().classificationType }}</p>
+            @if (errors()['classificationType']) {
+              <p class="text-red-500 text-sm mt-1">{{ errors()['classificationType'] }}</p>
             }
           </div>
 
