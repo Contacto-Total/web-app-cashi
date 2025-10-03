@@ -136,36 +136,40 @@ import { ApiSystemConfigService } from '../services/api-system-config.service';
           <div class="flex items-center justify-between">
             <!-- Filtros de Tenant y Portfolio -->
             <div class="flex items-center gap-3 text-xs">
-              <!-- Tenant/Client Filter -->
-              <div>
-                <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold">Cliente</div>
-                <select
-                  [(ngModel)]="selectedTenantId"
-                  (change)="onTenantChange()"
-                  class="text-xs font-semibold text-gray-800 dark:text-white bg-transparent border-none focus:outline-none cursor-pointer">
-                  <option *ngFor="let tenant of tenants" [ngValue]="tenant.id" class="bg-white dark:bg-slate-800">
-                    {{ tenant.tenantName }}
-                  </option>
-                </select>
-              </div>
+              <!-- Tenant/Client Filter - Solo si hay tenants -->
+              @if (tenants.length > 0) {
+                <div>
+                  <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold">Cliente</div>
+                  <select
+                    [(ngModel)]="selectedTenantId"
+                    (change)="onTenantChange()"
+                    class="text-xs font-semibold text-gray-800 dark:text-white bg-transparent border-none focus:outline-none cursor-pointer">
+                    <option *ngFor="let tenant of tenants" [ngValue]="tenant.id" class="bg-white dark:bg-slate-800">
+                      {{ tenant.tenantName }}
+                    </option>
+                  </select>
+                </div>
 
-              <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+                <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+              }
 
-              <!-- Portfolio Filter -->
-              <div>
-                <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold">Subcartera</div>
-                <select
-                  [(ngModel)]="selectedPortfolioId"
-                  (change)="onPortfolioChange()"
-                  class="font-semibold text-gray-800 dark:text-white text-[10px] bg-transparent border-none focus:outline-none cursor-pointer">
-                  <option [ngValue]="undefined" class="bg-white dark:bg-slate-800">Todas las Subcarteras</option>
-                  <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id" class="bg-white dark:bg-slate-800">
-                    {{ portfolio.portfolioName }}
-                  </option>
-                </select>
-              </div>
+              <!-- Portfolio Filter - Solo si hay portfolios -->
+              @if (portfolios.length > 0) {
+                <div>
+                  <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold">Cartera</div>
+                  <select
+                    [(ngModel)]="selectedPortfolioId"
+                    (change)="onPortfolioChange()"
+                    class="font-semibold text-gray-800 dark:text-white text-[10px] bg-transparent border-none focus:outline-none cursor-pointer">
+                    <option [ngValue]="undefined" class="bg-white dark:bg-slate-800">Todas las Carteras</option>
+                    <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id" class="bg-white dark:bg-slate-800">
+                      {{ portfolio.portfolioName }}
+                    </option>
+                  </select>
+                </div>
 
-              <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+                <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+              }
             </div>
 
             <div class="flex items-center gap-3 text-xs">
