@@ -114,6 +114,12 @@
 
         <!-- Actions -->
         <div class="flex gap-2">
+          <button
+            (click)="openCreateRootDialog()"
+            class="px-3 py-1 text-[10px] bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition-colors flex items-center gap-1">
+            <lucide-angular name="plus" [size]="12"></lucide-angular>
+            Nueva Tipificación
+          </button>
           @if (selectedTenantId) {
             <button
               (click)="openCreatePortfolioDialog()"
@@ -145,6 +151,20 @@
       (save)="onPortfolioCreated($event)"
       (cancel)="closePortfolioDialog()">
     </app-portfolio-form-dialog>
+  }
+
+  <!-- Classification Form Dialog -->
+  @if (showClassificationDialog()) {
+    <app-classification-form-dialog-v2
+      [mode]="classificationDialogMode()"
+      [classification]="selectedClassificationForEdit()"
+      [parentClassification]="parentClassificationForCreate()"
+      [defaultType]="selectedType"
+      [tenantId]="selectedTenantId"
+      [portfolioId]="selectedPortfolioId"
+      (save)="onClassificationSaved($event)"
+      (cancel)="closeClassificationDialog()">
+    </app-classification-form-dialog-v2>
   }
 
   <!-- Loading State -->
@@ -252,18 +272,21 @@
 
         <!-- Action Buttons -->
         <button
+          (click)="openCreateChildDialog(node.classification)"
           title="Agregar hijo"
           class="w-5 h-5 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
           <lucide-angular name="plus" [size]="12"></lucide-angular>
         </button>
 
         <button
+          (click)="openEditDialog(node.classification)"
           title="Editar"
           class="w-5 h-5 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors">
           <lucide-angular name="edit" [size]="12"></lucide-angular>
         </button>
 
         <button
+          (click)="deleteClassification(node.classification)"
           title="Eliminar"
           [disabled]="node.classification.isSystem"
           [class.opacity-30]="node.classification.isSystem"

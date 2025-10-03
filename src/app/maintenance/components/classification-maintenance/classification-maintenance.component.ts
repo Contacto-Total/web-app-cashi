@@ -13,11 +13,12 @@ import {
 import { Portfolio } from '../../models/portfolio.model';
 import { Tenant } from '../../models/tenant.model';
 import { PortfolioFormDialogComponent } from '../portfolio-form-dialog/portfolio-form-dialog.component';
+import { ClassificationFormDialogV2Component } from '../classification-form-dialog-v2/classification-form-dialog-v2.component';
 
 @Component({
   selector: 'app-classification-maintenance',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, PortfolioFormDialogComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, PortfolioFormDialogComponent, ClassificationFormDialogV2Component],
   templateUrl: './classification-maintenance.component.html',
   styleUrls: ['./classification-maintenance.component.scss']
 })
@@ -29,6 +30,11 @@ export class ClassificationMaintenanceComponent implements OnInit {
   loading = signal(false);
   showSuccess = signal(false);
   showPortfolioDialog = signal(false);
+  showClassificationDialog = signal(false);
+  classificationDialogMode = signal<'create' | 'edit'>('create');
+  selectedClassificationForEdit = signal<ClassificationCatalog | undefined>(undefined);
+  parentClassificationForCreate = signal<ClassificationCatalog | undefined>(undefined);
+
   classificationTypes = Object.values(ClassificationType);
   classifications: ClassificationCatalog[] = [];
   tenantConfigs: TenantClassificationConfig[] = [];
@@ -264,6 +270,64 @@ export class ClassificationMaintenanceComponent implements OnInit {
 
   getSelectedTenant(): Tenant | undefined {
     return this.tenants.find(t => t.id === this.selectedTenantId);
+  }
+
+  // Classification dialog methods
+  openCreateRootDialog() {
+    this.classificationDialogMode.set('create');
+    this.selectedClassificationForEdit.set(undefined);
+    this.parentClassificationForCreate.set(undefined);
+    this.showClassificationDialog.set(true);
+  }
+
+  openCreateChildDialog(parent: ClassificationCatalog) {
+    this.classificationDialogMode.set('create');
+    this.selectedClassificationForEdit.set(undefined);
+    this.parentClassificationForCreate.set(parent);
+    this.showClassificationDialog.set(true);
+  }
+
+  openEditDialog(classification: ClassificationCatalog) {
+    this.classificationDialogMode.set('edit');
+    this.selectedClassificationForEdit.set(classification);
+    this.parentClassificationForCreate.set(undefined);
+    this.showClassificationDialog.set(true);
+  }
+
+  closeClassificationDialog() {
+    this.showClassificationDialog.set(false);
+    this.selectedClassificationForEdit.set(undefined);
+    this.parentClassificationForCreate.set(undefined);
+  }
+
+  onClassificationSaved(classification: ClassificationCatalog) {
+    this.showClassificationDialog.set(false);
+    this.selectedClassificationForEdit.set(undefined);
+    this.parentClassificationForCreate.set(undefined);
+    this.showSuccessMessage();
+    this.loadClassifications();
+  }
+
+  deleteClassification(classification: ClassificationCatalog) {
+    if (classification.isSystem) {
+      alert('No se pueden eliminar tipificaciones del sistema');
+      return;
+    }
+
+    if (!confirm(`¿Está seguro de eliminar la tipificación "${classification.name}"?\n\nEsta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    this.classificationService.deleteClassification(classification.id).subscribe({
+      next: () => {
+        this.showSuccessMessage();
+        this.loadClassifications();
+      },
+      error: (error) => {
+        console.error('Error al eliminar tipificación:', error);
+        alert('Error al eliminar la tipificación. Puede que tenga dependencias.');
+      }
+    });
   }
 
   showSuccessMessage() {

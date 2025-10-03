@@ -132,46 +132,39 @@ import { ApiSystemConfigService } from '../services/api-system-config.service';
       <!-- Barra de Info Cliente - ULTRA COMPACTA -->
       <div class="bg-white dark:bg-slate-900 border-b border-blue-400 dark:border-slate-700 shadow-sm relative overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-r from-blue-50 dark:from-blue-950/50 to-transparent opacity-50"></div>
+
+        <!-- TEMPORAL: Filtros de Tenant y Portfolio - ABSOLUTE POSITION para fácil eliminación -->
+        @if (tenants.length > 0 || portfolios.length > 0) {
+          <div class="absolute top-1 left-3 z-10 flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-600 px-2 py-0.5 rounded text-[9px]">
+            <span class="text-yellow-800 dark:text-yellow-200 font-bold">TEMP - Testing Only:</span>
+
+            @if (tenants.length > 0) {
+              <select
+                [(ngModel)]="selectedTenantId"
+                (change)="onTenantChange()"
+                class="text-[9px] font-semibold text-gray-800 dark:text-white bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 cursor-pointer">
+                <option *ngFor="let tenant of tenants" [ngValue]="tenant.id">
+                  Cliente: {{ tenant.tenantName }}
+                </option>
+              </select>
+            }
+
+            @if (portfolios.length > 0) {
+              <select
+                [(ngModel)]="selectedPortfolioId"
+                (change)="onPortfolioChange()"
+                class="text-[9px] font-semibold text-gray-800 dark:text-white bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 cursor-pointer">
+                <option [ngValue]="undefined">Cartera: Todas</option>
+                <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id">
+                  Cartera: {{ portfolio.portfolioName }}
+                </option>
+              </select>
+            }
+          </div>
+        }
+
         <div class="relative px-3 py-1">
           <div class="flex items-center justify-between">
-            <!-- Filtros de Tenant y Portfolio -->
-            <div class="flex items-center gap-3 text-xs">
-              <!-- Tenant/Client Filter - Solo si hay tenants -->
-              @if (tenants.length > 0) {
-                <div>
-                  <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold">Cliente</div>
-                  <select
-                    [(ngModel)]="selectedTenantId"
-                    (change)="onTenantChange()"
-                    class="text-xs font-semibold text-gray-800 dark:text-white bg-transparent border-none focus:outline-none cursor-pointer">
-                    <option *ngFor="let tenant of tenants" [ngValue]="tenant.id" class="bg-white dark:bg-slate-800">
-                      {{ tenant.tenantName }}
-                    </option>
-                  </select>
-                </div>
-
-                <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
-              }
-
-              <!-- Portfolio Filter - Solo si hay portfolios -->
-              @if (portfolios.length > 0) {
-                <div>
-                  <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold">Cartera</div>
-                  <select
-                    [(ngModel)]="selectedPortfolioId"
-                    (change)="onPortfolioChange()"
-                    class="font-semibold text-gray-800 dark:text-white text-[10px] bg-transparent border-none focus:outline-none cursor-pointer">
-                    <option [ngValue]="undefined" class="bg-white dark:bg-slate-800">Todas las Carteras</option>
-                    <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id" class="bg-white dark:bg-slate-800">
-                      {{ portfolio.portfolioName }}
-                    </option>
-                  </select>
-                </div>
-
-                <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
-              }
-            </div>
-
             <div class="flex items-center gap-3 text-xs">
               <div>
                 <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold flex items-center gap-0.5">
