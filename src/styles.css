@@ -221,3 +221,20 @@ html, body {
     background-color: #ffffff !important; /* white */
   }
 }
+
+/* Classification Maintenance - Up/Down Buttons UI */
+
+.classification-tree-container {
+  position: relative;
+}
+
+.classification-item-wrapper {
+  position: relative;
+}
+
+.classification-item {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+}

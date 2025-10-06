@@ -54,6 +54,10 @@ export class ClassificationService {
     return this.http.delete<void>(`${this.baseUrl}/classifications/${id}`);
   }
 
+  updateDisplayOrder(updates: Array<{id: number, displayOrder: number}>): Observable<void> {
+    return this.http.patch<void>(`${this.baseUrl}/classifications/display-order`, updates);
+  }
+
   // Tenant Configuration Management
   getTenantClassifications(tenantId: number, portfolioId?: number): Observable<TenantClassificationConfig[]> {
     let params = new HttpParams();

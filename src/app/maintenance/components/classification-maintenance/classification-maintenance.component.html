@@ -115,19 +115,17 @@
         <!-- Actions -->
         <div class="flex gap-2">
           <button
+            (click)="openCreateCategoryDialog()"
+            class="px-3 py-1 text-[10px] bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold transition-colors flex items-center gap-1">
+            <span class="text-sm">+</span>
+            Nueva Categoría
+          </button>
+          <button
             (click)="openCreateRootDialog()"
             class="px-3 py-1 text-[10px] bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition-colors flex items-center gap-1">
             <lucide-angular name="plus" [size]="12"></lucide-angular>
             Nueva Tipificación
           </button>
-          @if (selectedTenantId) {
-            <button
-              (click)="openCreatePortfolioDialog()"
-              class="px-3 py-1 text-[10px] bg-green-600 hover:bg-green-700 text-white rounded font-semibold transition-colors flex items-center gap-1">
-              <lucide-angular name="plus" [size]="12"></lucide-angular>
-              Nueva Cartera
-            </button>
-          }
           <button
             (click)="expandAll()"
             class="px-2 py-1 text-[10px] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded transition-colors font-semibold">
@@ -143,16 +141,6 @@
     </div>
   </div>
 
-  <!-- Portfolio Creation Dialog -->
-  @if (showPortfolioDialog()) {
-    <app-portfolio-form-dialog
-      [selectedTenant]="getSelectedTenant()"
-      [portfolios]="portfolios"
-      (save)="onPortfolioCreated($event)"
-      (cancel)="closePortfolioDialog()">
-    </app-portfolio-form-dialog>
-  }
-
   <!-- Classification Form Dialog -->
   @if (showClassificationDialog()) {
     <app-classification-form-dialog
@@ -165,6 +153,14 @@
       (save)="onClassificationSaved($event)"
       (cancel)="closeClassificationDialog()">
     </app-classification-form-dialog>
+  }
+
+  <!-- Category Dialog -->
+  @if (showCategoryDialog()) {
+    <app-category-form-dialog
+      (save)="onCategorySaved($event)"
+      (cancel)="closeCategoryDialog()">
+    </app-category-form-dialog>
   }
 
   <!-- Loading State -->
@@ -180,7 +176,7 @@
   <!-- Tree View -->
   @if (!loading()) {
     <div class="flex-1 overflow-auto p-2">
-      <div class="bg-white dark:bg-slate-900 rounded-lg shadow-md p-2 transition-colors duration-300 border border-slate-200 dark:border-slate-800">
+      <div class="classification-tree-container bg-white dark:bg-slate-900 rounded-lg shadow-md p-2 transition-colors duration-300 border border-slate-200 dark:border-slate-800">
         @if (treeNodes.length === 0) {
           <!-- Empty State -->
           <div class="text-center py-20">
@@ -190,9 +186,11 @@
           </div>
         } @else {
           <!-- Tree Nodes -->
-          @for (node of treeNodes; track node.classification.id) {
-            <ng-container [ngTemplateOutlet]="treeNodeTemplate" [ngTemplateOutletContext]="{node: node, depth: 0}"></ng-container>
-          }
+          <div class="space-y-1">
+            @for (node of treeNodes; track node.classification.id; let idx = $index) {
+              <ng-container [ngTemplateOutlet]="treeNodeTemplate" [ngTemplateOutletContext]="{node: node, depth: 0, index: idx, siblings: treeNodes, parent: null}"></ng-container>
+            }
+          </div>
         }
       </div>
     </div>
@@ -200,33 +198,60 @@
 </div>
 
 <!-- Tree Node Template (Recursive) -->
-<ng-template #treeNodeTemplate let-node="node" let-depth="depth">
-  <div [style.margin-left.px]="depth * 16" class="mb-1">
+<ng-template #treeNodeTemplate let-node="node" let-depth="depth" let-index="index" let-siblings="siblings" let-parent="parent">
+  <div class="classification-item-wrapper" [style.margin-left.px]="depth * 16">
     <!-- Node Content -->
     <div
-      class="flex items-center justify-between px-2 py-1.5 rounded border-l-3 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50"
+      class="classification-item flex items-center justify-between px-2 py-1.5 rounded border-l-3 transition-colors mb-1"
       [class.bg-green-50]="node.config?.isEnabled"
-      [class.dark:bg-green-950/20]="node.config?.isEnabled"
-      [class.bg-slate-50]="!node.config?.isEnabled"
-      [class.dark:bg-slate-800/30]="!node.config?.isEnabled"
+      [class.dark:bg-green-950/40]="node.config?.isEnabled"
+      [class.hover:bg-green-100]="node.config?.isEnabled"
+      [class.dark:hover:bg-green-900/50]="node.config?.isEnabled"
+      [class.bg-slate-100]="!node.config?.isEnabled"
+      [class.dark:bg-slate-800/50]="!node.config?.isEnabled"
+      [class.hover:bg-slate-200]="!node.config?.isEnabled"
+      [class.dark:hover:bg-slate-700/50]="!node.config?.isEnabled"
       [class.border-l-green-500]="node.config?.isEnabled"
-      [class.border-l-slate-300]="!node.config?.isEnabled"
+      [class.dark:border-l-green-600]="node.config?.isEnabled"
+      [class.border-l-slate-400]="!node.config?.isEnabled"
       [class.dark:border-l-slate-600]="!node.config?.isEnabled">
 
       <div class="flex items-center gap-2 flex-1 min-w-0">
+        <!-- Botones de Reordenamiento -->
+        <div class="flex-shrink-0 flex flex-col gap-0.5">
+          <button
+            (click)="moveUp(node, siblings, index, parent); $event.stopPropagation()"
+            [disabled]="index === 0"
+            [class.opacity-30]="index === 0"
+            [class.cursor-not-allowed]="index === 0"
+            title="Subir"
+            class="w-5 h-5 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors disabled:hover:bg-transparent disabled:hover:text-slate-500 font-bold text-xs">
+            ▲
+          </button>
+          <button
+            (click)="moveDown(node, siblings, index, parent); $event.stopPropagation()"
+            [disabled]="index === siblings.length - 1"
+            [class.opacity-30]="index === siblings.length - 1"
+            [class.cursor-not-allowed]="index === siblings.length - 1"
+            title="Bajar"
+            class="w-5 h-5 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors disabled:hover:bg-transparent disabled:hover:text-slate-500 font-bold text-xs">
+            ▼
+          </button>
+        </div>
+
         <!-- Expand/Collapse Button -->
         @if (node.children && node.children.length > 0) {
           <button
-            (click)="toggleNode(node.classification.id)"
-            class="flex-shrink-0 w-4 h-4 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
+            (click)="toggleNode(node.classification.id); $event.stopPropagation()"
+            class="flex-shrink-0 w-5 h-5 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
             @if (isExpanded(node.classification.id)) {
-              <lucide-angular name="chevron-down" [size]="12"></lucide-angular>
+              <lucide-angular name="chevron-down" [size]="14"></lucide-angular>
             } @else {
-              <lucide-angular name="chevron-right" [size]="12"></lucide-angular>
+              <lucide-angular name="chevron-right" [size]="14"></lucide-angular>
             }
           </button>
         } @else {
-          <div class="w-4 flex-shrink-0"></div>
+          <div class="w-5 flex-shrink-0"></div>
         }
 
         <!-- Icon con color de fondo -->
@@ -261,32 +286,33 @@
       <!-- Actions -->
       <div class="flex items-center gap-1.5 ml-2 flex-shrink-0">
         <!-- Enable/Disable Toggle -->
-        <label class="relative inline-flex items-center cursor-pointer">
+        <label class="relative inline-flex items-center cursor-pointer"
+               (click)="$event.stopPropagation()">
           <input
             type="checkbox"
             [checked]="node.config?.isEnabled || false"
-            (change)="toggleClassification(node, $event)"
+            (change)="toggleClassification(node, $event); $event.stopPropagation()"
             class="sr-only peer">
           <div class="w-8 h-4 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-green-500"></div>
         </label>
 
         <!-- Action Buttons -->
         <button
-          (click)="openCreateChildDialog(node.classification)"
+          (click)="openCreateChildDialog(node.classification); $event.stopPropagation()"
           title="Agregar hijo"
           class="w-5 h-5 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
           <lucide-angular name="plus" [size]="12"></lucide-angular>
         </button>
 
         <button
-          (click)="openEditDialog(node.classification)"
+          (click)="openEditDialog(node.classification); $event.stopPropagation()"
           title="Editar"
           class="w-5 h-5 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors">
           <lucide-angular name="edit" [size]="12"></lucide-angular>
         </button>
 
         <button
-          (click)="deleteClassification(node.classification)"
+          (click)="deleteClassification(node.classification); $event.stopPropagation()"
           title="Eliminar"
           [disabled]="node.classification.isSystem"
           [class.opacity-30]="node.classification.isSystem"
@@ -299,9 +325,9 @@
 
     <!-- Children Nodes (Recursive) -->
     @if (isExpanded(node.classification.id) && node.children && node.children.length > 0) {
-      <div class="mt-0.5">
-        @for (child of node.children; track child.classification.id) {
-          <ng-container [ngTemplateOutlet]="treeNodeTemplate" [ngTemplateOutletContext]="{node: child, depth: depth + 1}"></ng-container>
+      <div class="mt-1 space-y-1">
+        @for (child of node.children; track child.classification.id; let childIdx = $index) {
+          <ng-container [ngTemplateOutlet]="treeNodeTemplate" [ngTemplateOutletContext]="{node: child, depth: depth + 1, index: childIdx, siblings: node.children, parent: node}"></ng-container>
         }
       </div>
     }

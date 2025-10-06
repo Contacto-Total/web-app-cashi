@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, X, Save } from 'lucide-angular';
@@ -12,6 +12,7 @@ interface PortfolioForm {
   portfolioType: string;
   parentPortfolioId?: number;
   description: string;
+  isActive: boolean;
 }
 
 @Component({
@@ -28,10 +29,10 @@ interface PortfolioForm {
            (click)="$event.stopPropagation()">
 
         <!-- Header -->
-        <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white px-6 py-4 flex items-center justify-between rounded-t-lg z-10">
+        <div class="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 dark:from-green-700 dark:to-green-800 text-white px-6 py-4 flex items-center justify-between rounded-t-lg z-10">
           <div>
-            <h2 class="text-xl font-bold">Crear Nueva Cartera</h2>
-            <p class="text-sm text-blue-100 dark:text-blue-200">{{ selectedTenant?.tenantName || 'Cliente' }}</p>
+            <h2 class="text-xl font-bold">{{ isEditMode ? 'Editar Cartera' : 'Crear Nueva Cartera' }}</h2>
+            <p class="text-sm text-green-100 dark:text-green-200">{{ selectedTenant?.tenantName || 'Cliente' }}</p>
           </div>
           <button
             (click)="onCancel()"
@@ -50,8 +51,9 @@ interface PortfolioForm {
             <input
               type="text"
               [(ngModel)]="form.portfolioCode"
+              [disabled]="isEditMode"
               placeholder="Ej: TRAMO-1, CART-A"
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
               [class.border-red-500]="errors()['portfolioCode']"
             />
             @if (errors()['portfolioCode']) {
@@ -127,9 +129,25 @@ interface PortfolioForm {
               [(ngModel)]="form.description"
               rows="3"
               placeholder="Descripción opcional de la cartera..."
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
             ></textarea>
           </div>
+
+          <!-- Is Active (solo en modo edición) -->
+          @if (isEditMode) {
+            <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <input
+                type="checkbox"
+                id="isActive"
+                [(ngModel)]="form.isActive"
+                class="w-5 h-5 text-green-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-green-500 cursor-pointer"
+              />
+              <label for="isActive" class="text-sm font-bold text-gray-700 dark:text-gray-200 cursor-pointer flex-1">
+                Cartera Activa
+                <span class="block text-xs font-normal text-gray-500 dark:text-gray-400 mt-0.5">Desmarca para desactivar temporalmente esta cartera</span>
+              </label>
+            </div>
+          }
         </div>
 
         <!-- Footer -->
@@ -143,7 +161,7 @@ interface PortfolioForm {
           <button
             (click)="onSave()"
             [disabled]="saving()"
-            class="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+            class="px-6 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg flex items-center gap-2">
             @if (saving()) {
               <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               Guardando...
@@ -157,23 +175,43 @@ interface PortfolioForm {
     </div>
   `
 })
-export class PortfolioFormDialogComponent {
+export class PortfolioFormDialogComponent implements OnInit {
   @Input() selectedTenant?: Tenant;
   @Input() portfolios: Portfolio[] = [];
+  @Input() mode: 'create' | 'edit' = 'create';
+  @Input() portfolio?: Portfolio;
   @Output() save = new EventEmitter<any>();
   @Output() cancel = new EventEmitter<void>();
+
+  isEditMode = false;
 
   form: PortfolioForm = {
     portfolioCode: '',
     portfolioName: '',
     portfolioType: '',
-    description: ''
+    description: '',
+    isActive: true
   };
 
   saving = signal(false);
   errors = signal<Record<string, string>>({});
 
   constructor(private classificationService: ClassificationService) {}
+
+  ngOnInit() {
+    this.isEditMode = this.mode === 'edit';
+
+    if (this.isEditMode && this.portfolio) {
+      this.form = {
+        portfolioCode: this.portfolio.portfolioCode,
+        portfolioName: this.portfolio.portfolioName,
+        portfolioType: this.portfolio.portfolioType || '',
+        parentPortfolioId: this.portfolio.parentPortfolioId,
+        description: this.portfolio.description || '',
+        isActive: this.portfolio.isActive
+      };
+    }
+  }
 
   validate(): boolean {
     const newErrors: Record<string, string> = {};
@@ -195,6 +233,16 @@ export class PortfolioFormDialogComponent {
 
     this.saving.set(true);
 
+    if (this.isEditMode && this.portfolio) {
+      this.updatePortfolio();
+    } else {
+      this.createPortfolio();
+    }
+  }
+
+  createPortfolio() {
+    if (!this.selectedTenant) return;
+
     const data = {
       tenantId: this.selectedTenant.id,
       portfolioCode: this.form.portfolioCode.trim(),
@@ -215,6 +263,23 @@ export class PortfolioFormDialogComponent {
         alert('Error al crear la cartera. Verifique que el código no esté duplicado.');
       }
     });
+  }
+
+  updatePortfolio() {
+    if (!this.portfolio) return;
+
+    const data = {
+      portfolioName: this.form.portfolioName.trim(),
+      portfolioType: this.form.portfolioType || undefined,
+      parentPortfolioId: this.form.parentPortfolioId,
+      description: this.form.description.trim() || undefined,
+      isActive: this.form.isActive
+    };
+
+    // TODO: Implementar endpoint PUT /api/portfolios/{id} en el backend
+    console.warn('Update portfolio not implemented in backend yet:', data);
+    alert('⚠️ Funcionalidad pendiente:\n\nEl endpoint PUT /api/portfolios/{id} aún no está implementado en el backend.');
+    this.saving.set(false);
   }
 
   onCancel() {

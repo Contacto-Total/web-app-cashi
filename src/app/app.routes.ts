@@ -15,6 +15,10 @@ export const routes: Routes = [
     loadComponent: () => import('./maintenance/components/classification-maintenance/classification-maintenance.component').then(m => m.ClassificationMaintenanceComponent)
   },
   {
+    path: 'maintenance/portfolios',
+    loadComponent: () => import('./maintenance/components/portfolio-maintenance/portfolio-maintenance.component').then(m => m.PortfolioMaintenanceComponent)
+  },
+  {
     path: '**',
     redirectTo: '/collection-management'
   }

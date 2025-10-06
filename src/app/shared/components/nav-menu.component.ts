@@ -38,6 +38,10 @@ import { MatMenuModule } from '@angular/material/menu';
           <mat-icon>category</mat-icon>
           Tipificaciones
         </button>
+        <button mat-menu-item routerLink="/maintenance/portfolios">
+          <mat-icon>business_center</mat-icon>
+          Carteras
+        </button>
       </mat-menu>
     </mat-toolbar>
   `,

@@ -12,13 +12,13 @@ import {
 } from '../../models/classification.model';
 import { Portfolio } from '../../models/portfolio.model';
 import { Tenant } from '../../models/tenant.model';
-import { PortfolioFormDialogComponent } from '../portfolio-form-dialog/portfolio-form-dialog.component';
 import { ClassificationFormDialogComponent } from '../classification-form-dialog/classification-form-dialog.component';
+import { CategoryFormDialogComponent } from '../category-form-dialog/category-form-dialog.component';
 
 @Component({
   selector: 'app-classification-maintenance',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, PortfolioFormDialogComponent, ClassificationFormDialogComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ClassificationFormDialogComponent, CategoryFormDialogComponent],
   templateUrl: './classification-maintenance.component.html',
   styleUrls: ['./classification-maintenance.component.scss']
 })
@@ -29,8 +29,8 @@ export class ClassificationMaintenanceComponent implements OnInit {
 
   loading = signal(false);
   showSuccess = signal(false);
-  showPortfolioDialog = signal(false);
   showClassificationDialog = signal(false);
+  showCategoryDialog = signal(false);
   classificationDialogMode = signal<'create' | 'edit'>('create');
   selectedClassificationForEdit = signal<ClassificationCatalog | undefined>(undefined);
   parentClassificationForCreate = signal<ClassificationCatalog | undefined>(undefined);
@@ -253,25 +253,6 @@ export class ClassificationMaintenanceComponent implements OnInit {
     this.themeService.toggleTheme();
   }
 
-  openCreatePortfolioDialog() {
-    this.showPortfolioDialog.set(true);
-  }
-
-  closePortfolioDialog() {
-    this.showPortfolioDialog.set(false);
-  }
-
-  onPortfolioCreated(portfolio: Portfolio) {
-    this.showPortfolioDialog.set(false);
-    this.showSuccessMessage();
-    // Reload portfolios to include the newly created one
-    this.loadPortfolios();
-  }
-
-  getSelectedTenant(): Tenant | undefined {
-    return this.tenants.find(t => t.id === this.selectedTenantId);
-  }
-
   // Classification dialog methods
   openCreateRootDialog() {
     this.classificationDialogMode.set('create');
@@ -335,6 +316,22 @@ export class ClassificationMaintenanceComponent implements OnInit {
     setTimeout(() => this.showSuccess.set(false), 3000);
   }
 
+  // Category dialog methods
+  openCreateCategoryDialog() {
+    this.showCategoryDialog.set(true);
+  }
+
+  closeCategoryDialog() {
+    this.showCategoryDialog.set(false);
+  }
+
+  onCategorySaved(categoryName: string) {
+    this.showCategoryDialog.set(false);
+    this.showSuccessMessage();
+    // Reload classification types
+    this.classificationTypes = Object.values(ClassificationType);
+  }
+
   getTypeLabel(type: ClassificationType): string {
     const labels: Record<ClassificationType, string> = {
       [ClassificationType.CONTACT_RESULT]: 'Resultado de Contacto',
@@ -344,5 +341,54 @@ export class ClassificationMaintenanceComponent implements OnInit {
       [ClassificationType.CUSTOM]: 'Personalizado'
     };
     return labels[type];
+  }
+
+  /**
+   * Mueve un nodo hacia arriba en el orden
+   */
+  moveUp(node: ClassificationTreeNode, siblings: ClassificationTreeNode[], index: number, parent: ClassificationTreeNode | null) {
+    if (index === 0) return; // Ya está al inicio
+
+    // Intercambiar posiciones en el array
+    [siblings[index - 1], siblings[index]] = [siblings[index], siblings[index - 1]];
+
+    // Actualizar displayOrder en el backend
+    this.updateOrder(siblings);
+  }
+
+  /**
+   * Mueve un nodo hacia abajo en el orden
+   */
+  moveDown(node: ClassificationTreeNode, siblings: ClassificationTreeNode[], index: number, parent: ClassificationTreeNode | null) {
+    if (index === siblings.length - 1) return; // Ya está al final
+
+    // Intercambiar posiciones en el array
+    [siblings[index], siblings[index + 1]] = [siblings[index + 1], siblings[index]];
+
+    // Actualizar displayOrder en el backend
+    this.updateOrder(siblings);
+  }
+
+  /**
+   * Actualiza el orden de los nodos en el backend
+   */
+  private updateOrder(siblings: ClassificationTreeNode[]) {
+    // Actualizar displayOrder (espaciado de 10 para permitir inserciones futuras)
+    const updates = siblings.map((node, index) => ({
+      id: node.classification.id,
+      displayOrder: index * 10
+    }));
+
+    // Guardar en el backend
+    this.classificationService.updateDisplayOrder(updates).subscribe({
+      next: () => {
+        this.showSuccessMessage();
+      },
+      error: (error) => {
+        console.error('Error al actualizar orden:', error);
+        // Recargar para revertir cambios visuales
+        this.loadClassifications();
+      }
+    });
   }
 }

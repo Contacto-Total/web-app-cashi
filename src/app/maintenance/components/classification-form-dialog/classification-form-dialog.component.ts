@@ -416,8 +416,7 @@ export class ClassificationFormDialogComponent implements OnInit {
       description: this.form.description.trim() || undefined,
       displayOrder: this.form.displayOrder,
       iconName: this.form.iconName.trim() || undefined,
-      colorHex: this.form.colorHex || undefined,
-      isSystem: false
+      colorHex: this.form.colorHex || undefined
     };
 
     this.classificationService.createClassification(command).subscribe({

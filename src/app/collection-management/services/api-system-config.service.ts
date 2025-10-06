@@ -17,6 +17,8 @@ export interface ManagementClassificationResource {
   requiresPayment: boolean;
   requiresSchedule: boolean;
   requiresFollowUp: boolean;
+  parentId?: number;
+  hierarchyLevel?: number;
 }
 
 export interface CampaignResource {
@@ -207,7 +209,9 @@ export class ApiSystemConfigService {
       label: item.label,
       requiere_pago: item.requiresPayment,
       requiere_fecha: item.requiresSchedule,
-      requiere_seguimiento: item.requiresFollowUp
+      requiere_seguimiento: item.requiresFollowUp,
+      parentId: item.parentId,
+      hierarchyLevel: item.hierarchyLevel
     }));
   }
 

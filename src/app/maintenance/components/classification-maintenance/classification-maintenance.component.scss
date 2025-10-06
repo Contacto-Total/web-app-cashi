@@ -1,1 +1,21 @@
-// Estilos mínimos - Tailwind maneja el resto
+// ============================================
+// CLASSIFICATION ITEM STYLES
+// ============================================
+
+.classification-item {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+
+  // Estado hover suave
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  }
+}
+
+// Dark mode adjustments
+:host-context(.dark) {
+  .classification-item:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+}

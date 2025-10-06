@@ -452,8 +452,8 @@ import { ApiSystemConfigService } from '../services/api-system-config.service';
                       (managementForm.tipoGestion ? 'bg-green-100 border-green-500' : '')"
                   >
                     <option value="">-- Seleccionar gestión --</option>
-                    @for (gest of managementClassifications(); track gest.id) {
-                      <option [value]="gest.id">[{{ gest.codigo }}] {{ gest.label }}</option>
+                    @for (gest of managementClassificationsHierarchical(); track gest.id) {
+                      <option [value]="gest.id">{{ gest.displayLabel }}</option>
                     }
                   </select>
                   <lucide-angular name="chevron-down" [size]="16" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></lucide-angular>
@@ -740,6 +740,55 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   campaign = computed(() => this.systemConfigService.getCampaign());
   contactClassifications = computed(() => this.systemConfigService.getContactClassifications());
   managementClassifications = computed(() => this.systemConfigService.getManagementClassifications());
+
+  // Lista jerárquica de tipificaciones de gestión para el dropdown
+  managementClassificationsHierarchical = computed(() => {
+    const all: any[] = this.managementClassifications() as any[];
+
+    // Crear mapa de padres e hijos - usar string para IDs ya que vienen como string del backend
+    const byId = new Map<string, any>();
+    const children = new Map<string, any[]>();
+
+    all.forEach((item: any) => {
+      const itemId = String(item.id);
+      byId.set(itemId, item);
+      children.set(itemId, []);
+    });
+
+    // Construir relaciones padre-hijo
+    all.forEach((item: any) => {
+      if (item.parentId) {
+        const parentIdStr = String(item.parentId);
+        const childList = children.get(parentIdStr);
+        if (childList) {
+          childList.push(item);
+        }
+      }
+    });
+
+    // Función recursiva para aplanar con indentación
+    const flatten = (items: any[], level: number = 0): any[] => {
+      const flattened: any[] = [];
+      items.forEach((item: any) => {
+        flattened.push({
+          ...item,
+          indentLevel: level,
+          displayLabel: '  '.repeat(level) + (level > 0 ? '└─ ' : '') + `[${item.codigo}] ${item.label}`
+        });
+        const itemIdStr = String(item.id);
+        const itemChildren = children.get(itemIdStr) || [];
+        if (itemChildren.length > 0) {
+          flattened.push(...flatten(itemChildren, level + 1));
+        }
+      });
+      return flattened;
+    };
+
+    // Obtener solo las raíces (sin parentId)
+    const roots = all.filter((item: any) => !item.parentId);
+    return flatten(roots, 0);
+  });
+
   paymentMethods = computed(() => this.systemConfigService.getPaymentMethods());
   scheduleTypes = computed(() => this.systemConfigService.getScheduleConfig().tipos_cronograma);
   periodicities = computed(() => this.systemConfigService.getScheduleConfig().periodicidades);

@@ -23,6 +23,8 @@ export interface ManagementClassification {
   requiere_periodicidad?: boolean;
   requiere_autorizacion?: boolean;
   requiere_seguimiento?: boolean;
+  parentId?: number;          // NUEVO: ID del padre en la jerarquía
+  hierarchyLevel?: number;    // NUEVO: Nivel en la jerarquía (1, 2, 3...)
 }
 
 export interface PaymentNoReason {
