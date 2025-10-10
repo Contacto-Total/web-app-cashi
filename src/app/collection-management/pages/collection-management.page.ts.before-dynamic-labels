@@ -438,45 +438,82 @@ import { ApiSystemConfigService } from '../services/api-system-config.service';
             </div>
             }
 
-            <!-- Tipo de Gestión - SISTEMA DINÁMICO (N NIVELES) -->
-            @if (usesHierarchicalClassifications()) {
-              @for (level of hierarchyLevels(); track $index) {
-                @if (shouldShowLevel($index)) {
-                  <div class="bg-green-50 dark:bg-green-950/30 rounded-lg shadow-md border border-green-300 dark:border-green-900/50 p-2 mb-2 animate-[fadeIn_0.3s_ease-in]">
-                    <label class="block font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
-                      <div [class]="'w-1.5 h-1.5 rounded-full ' +
-                        ($index === 0 ? 'bg-red-500' :
-                         $index === 1 ? 'bg-blue-500' :
-                         $index === 2 ? 'bg-purple-500' :
-                         $index === 3 ? 'bg-orange-500' :
-                         'bg-green-500')"></div>
-                      {{ getDynamicLevelLabel($index) }}{{ $index === 0 ? ' *' : '' }}
-                    </label>
-                    <div class="relative">
-                      <select
-                        [ngModel]="selectedClassifications()[$index]"
-                        (ngModelChange)="onClassificationLevelChange($index, $event)"
-                        [class]="'w-full p-2 pr-8 border rounded-lg font-semibold text-gray-700 dark:text-white appearance-none cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 hover:border-green-500 text-xs ' +
-                          (errors().tipoGestion && $index === 0 ? 'border-red-500 bg-red-50 dark:bg-red-950/30' : 'border-green-300 dark:border-green-700 bg-white dark:bg-gray-900') + ' ' +
-                          (selectedClassifications()[$index] ? 'bg-green-100 dark:bg-green-950/30 border-green-500 dark:border-green-600' : '')"
-                      >
-                        <option value="">-- Seleccionar --</option>
-                        @for (option of level; track option.id) {
-                          <option [value]="option.id">[{{ option.codigo }}] {{ option.label }}</option>
-                        }
-                      </select>
-                      <lucide-angular name="chevron-down" [size]="16" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></lucide-angular>
-                    </div>
-                    @if (errors().tipoGestion && $index === 0) {
-                      <div class="text-red-600 dark:text-red-400 text-[10px] mt-1 flex items-center gap-1">
-                        <lucide-angular name="alert-circle" [size]="12"></lucide-angular>
-                        Requerido
-                      </div>
+            <!-- Tipo de Gestión - COMPACTO -->
+            <!-- Tipo de Gestión - 3 NIVELES FIJOS SIMPLES -->
+              <!-- Nivel 1 -->
+              <div class="bg-green-50 dark:bg-green-950/30 rounded-lg shadow-md border border-green-300 dark:border-green-900/50 p-2 mb-2">
+                <label class="block font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
+                  <div class="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                  {{ getLevel1Label() }} *
+                </label>
+                <div class="relative">
+                  <select
+                    [(ngModel)]="managementForm.clasificacionNivel1"
+                    (ngModelChange)="onLevel1Change()"
+                    [class]="'w-full p-2 pr-8 border rounded-lg font-semibold text-gray-700 dark:text-white appearance-none cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 hover:border-green-500 text-xs ' +
+                      (errors().tipoGestion ? 'border-red-500 bg-red-50 dark:bg-red-950/30' : 'border-green-300 dark:border-green-700 bg-white dark:bg-gray-900') + ' ' +
+                      (managementForm.clasificacionNivel1 ? 'bg-green-100 dark:bg-green-950/30 border-green-500 dark:border-green-600' : '')"
+                  >
+                    <option value="">-- Seleccionar nivel 1 --</option>
+                    @for (option of getLevel1Classifications(); track option.id) {
+                      <option [value]="option.id">[{{ option.codigo }}] {{ option.label }}</option>
                     }
+                  </select>
+                  <lucide-angular name="chevron-down" [size]="16" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></lucide-angular>
+                </div>
+                @if (errors().tipoGestion) {
+                  <div class="text-red-600 text-[10px] mt-1 flex items-center gap-1">
+                    <lucide-angular name="alert-circle" [size]="12"></lucide-angular>
+                    Requerido
                   </div>
                 }
+              </div>
+
+              <!-- Nivel 2 -->
+              @if (managementForm.clasificacionNivel1) {
+                <div class="bg-green-50 dark:bg-green-950/30 rounded-lg shadow-md border border-green-300 dark:border-green-900/50 p-2 mb-2">
+                  <label class="block font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
+                    <div class="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                    {{ getLevel2Label() }}
+                  </label>
+                  <div class="relative">
+                    <select
+                      [(ngModel)]="managementForm.clasificacionNivel2"
+                      (ngModelChange)="onLevel2Change()"
+                      class="w-full p-2 pr-8 border border-green-300 dark:border-green-700 rounded-lg font-semibold text-gray-700 dark:text-white appearance-none cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 hover:border-green-500 text-xs bg-white dark:bg-gray-900"
+                    >
+                      <option value="">-- Seleccionar nivel 2 --</option>
+                      @for (option of getChildClassifications(+managementForm.clasificacionNivel1); track option.id) {
+                        <option [value]="option.id">[{{ option.codigo }}] {{ option.label }}</option>
+                      }
+                    </select>
+                    <lucide-angular name="chevron-down" [size]="16" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></lucide-angular>
+                  </div>
+                </div>
               }
-            }
+
+              <!-- Nivel 3 -->
+              @if (managementForm.clasificacionNivel2 && hasChildClassifications(managementForm.clasificacionNivel2)) {
+                <div class="bg-green-50 dark:bg-green-950/30 rounded-lg shadow-md border border-green-300 dark:border-green-900/50 p-2 mb-2">
+                  <label class="block font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
+                    <div class="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                    {{ getLevel3Label() }}
+                  </label>
+                  <div class="relative">
+                    <select
+                      [(ngModel)]="managementForm.clasificacionNivel3"
+                      (ngModelChange)="onLevel3Change()"
+                      class="w-full p-2 pr-8 border border-green-300 dark:border-green-700 rounded-lg font-semibold text-gray-700 dark:text-white appearance-none cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 hover:border-green-500 text-xs bg-white dark:bg-gray-900"
+                    >
+                      <option value="">-- Seleccionar nivel 3 --</option>
+                      @for (option of getChildClassifications(+managementForm.clasificacionNivel2); track option.id) {
+                        <option [value]="option.id">[{{ option.codigo }}] {{ option.label }}</option>
+                      }
+                    </select>
+                    <lucide-angular name="chevron-down" [size]="16" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></lucide-angular>
+                  </div>
+                </div>
+              }
 
             <!-- Sección de Pago - COMPACTA -->
             @if (showPaymentSection()) {
@@ -853,48 +890,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     notasPrivadas: ''
   };
 
-  // Sistema dinámico de clasificaciones jerárquicas (soporta N niveles)
-  // IMPORTANTE: Usar signal para que el computed reaccione a los cambios
-  selectedClassifications = signal<string[]>([]);
-
-  // Computed para obtener los niveles jerárquicos dinámicamente
-  hierarchyLevels = computed(() => {
-    const all = this.managementClassifications();
-    const selected = this.selectedClassifications(); // Leer el signal
-    const levels: any[][] = [];
-
-    console.log('🔍 hierarchyLevels - Total classifications:', all.length);
-    console.log('🔍 hierarchyLevels - Selected classifications:', selected);
-
-    // Nivel 1: raíces
-    const roots = all.filter(c => c.hierarchyLevel === 1 || !c.parentId);
-    console.log('🔍 hierarchyLevels - Roots found:', roots.length, roots.map(r => `${r.codigo} (id:${r.id})`));
-
-    if (roots.length > 0) {
-      levels.push(roots);
-    }
-
-    // Niveles subsiguientes basados en selecciones
-    for (let i = 0; i < selected.length; i++) {
-      const parentId = selected[i];
-      console.log(`🔍 hierarchyLevels - Level ${i + 1}: Looking for children of parentId=${parentId}`);
-
-      if (parentId) {
-        const children = all.filter(c => c.parentId && Number(c.parentId) === Number(parentId));
-        console.log(`🔍 hierarchyLevels - Found ${children.length} children:`, children.map(c => `${c.codigo} (id:${c.id})`));
-
-        if (children.length > 0) {
-          levels.push(children);
-        } else {
-          break; // No hay más niveles
-        }
-      }
-    }
-
-    console.log('🔍 hierarchyLevels - Total levels:', levels.length);
-    return levels;
-  });
-
   scheduleForm = {
     numeroCuotas: '',
     montoCuota: '',
@@ -1131,127 +1126,100 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 //     console.log('📊 Selected levels:', this.managementForm.selectedLevels);
 //     console.log('📊 Hierarchy levels:', this.hierarchyLevels().length);
 //   }
+  // Obtener clasificaciones de nivel 1 (raíces)
+  getLevel1Classifications() {
+    const all = this.managementClassifications();
+    const roots = all.filter(c => c.hierarchyLevel === 1);
+    console.log('🔍 ALL CLASSIFICATIONS:', all.map(c => ({ codigo: c.codigo, hierarchyLevel: c.hierarchyLevel, parentId: c.parentId })));
+    console.log('🎯 Level 1 classifications:', roots.length, roots.map(r => `${r.codigo} (id:${r.id})`));
+    return roots;
+  }
+
+  // Obtener hijos de una clasificación padre
+  getChildClassifications(parentId: number | null) {
+    if (!parentId) return [];
+    const all = this.managementClassifications();
+    const children = all.filter(c => c.parentId && Number(c.parentId) === Number(parentId));
+    console.log(`🎯 Children of ${parentId}:`, children.length, children.map(c => `${c.codigo} (id:${c.id})`));
+    return children;
+  }
+
+  // Manejar cambio de nivel 1
+  onLevel1Change() {
+    console.log('🔄 Level 1 changed to:', this.managementForm.clasificacionNivel1);
+    this.managementForm.clasificacionNivel2 = '';
+    this.managementForm.clasificacionNivel3 = '';
+    
+    if (this.managementForm.clasificacionNivel1) {
+      this.managementForm.tipoGestion = this.managementForm.clasificacionNivel1;
+    }
+  }
+
+  // Manejar cambio de nivel 2
+  onLevel2Change() {
+    console.log('🔄 Level 2 changed to:', this.managementForm.clasificacionNivel2);
+    this.managementForm.clasificacionNivel3 = '';
+    
+    if (this.managementForm.clasificacionNivel2) {
+      this.managementForm.tipoGestion = this.managementForm.clasificacionNivel2;
+    }
+  }
+
+  // Manejar cambio de nivel 3
+  onLevel3Change() {
+    console.log('🔄 Level 3 changed to:', this.managementForm.clasificacionNivel3);
+    
+    if (this.managementForm.clasificacionNivel3) {
+      this.managementForm.tipoGestion = this.managementForm.clasificacionNivel3;
+    }
+  }
+
   showManagementType(): boolean {
     return this.managementForm.resultadoContacto === 'CPC' || this.managementForm.resultadoContacto === 'CTT';
   }
 
-  // Detectar si el portfolio usa clasificaciones jerárquicas
+  // Detectar si el portfolio usa clasificaciones jerárquicas (Financiera Oh)
   usesHierarchicalClassifications(): boolean {
-    const levels = this.hierarchyLevels();
-    return levels.length > 0 && levels[0].length > 0;
+    const level1 = this.getLevel1Classifications();
+    return level1.length > 0;
   }
 
-  // ========================================
-  // NUEVAS FUNCIONES DINÁMICAS PARA N NIVELES
-  // ========================================
-
-  /**
-   * Obtiene las clasificaciones disponibles para un nivel específico
-   * @param levelIndex Índice del nivel (0 = nivel 1, 1 = nivel 2, etc.)
-   */
-  getClassificationsForLevel(levelIndex: number): any[] {
-    const levels = this.hierarchyLevels();
-    return levels[levelIndex] || [];
+  // Verificar si una clasificación tiene hijos
+  hasChildClassifications(parentId: string | number): boolean {
+    if (!parentId) return false;
+    const children = this.getChildClassifications(+parentId);
+    return children.length > 0;
   }
 
-  /**
-   * Maneja el cambio de selección en cualquier nivel
-   * @param levelIndex Índice del nivel que cambió
-   * @param value Nuevo valor seleccionado
-   */
-  onClassificationLevelChange(levelIndex: number, value: string) {
-    console.log(`🔄 Level ${levelIndex + 1} changed to:`, value);
-
-    // Crear un NUEVO array (importante para que Angular detecte el cambio en el computed)
-    const newSelections = [...this.selectedClassifications()];
-    newSelections[levelIndex] = value;
-
-    // Limpiar niveles inferiores y asignar el nuevo array usando .set()
-    this.selectedClassifications.set(newSelections.slice(0, levelIndex + 1));
-
-    console.log(`✅ Updated selectedClassifications:`, this.selectedClassifications());
-
-    // Actualizar también los campos del formulario legacy (para compatibilidad)
-    if (levelIndex === 0) {
-      this.managementForm.clasificacionNivel1 = value;
-      this.managementForm.clasificacionNivel2 = '';
-      this.managementForm.clasificacionNivel3 = '';
-    } else if (levelIndex === 1) {
-      this.managementForm.clasificacionNivel2 = value;
-      this.managementForm.clasificacionNivel3 = '';
-    } else if (levelIndex === 2) {
-      this.managementForm.clasificacionNivel3 = value;
+  // Obtener el label dinámico para nivel 1
+  getLevel1Label(): string {
+    const level1 = this.getLevel1Classifications();
+    if (level1.length === 0) return 'Nivel 1';
+    const codes = level1.map(c => c.codigo);
+    if (codes.includes('RP') || codes.includes('CSA')) {
+      return 'Tipo de Resultado';
     }
-
-    // Actualizar tipoGestion con el último nivel seleccionado
-    if (value) {
-      this.managementForm.tipoGestion = value;
-    } else {
-      // Si se deselecciona, buscar el último nivel válido
-      const lastValid = this.selectedClassifications().filter(v => v).pop();
-      this.managementForm.tipoGestion = lastValid || '';
-    }
+    return 'Categoría Principal';
   }
 
-  /**
-   * Obtiene el label dinámico para un nivel específico
-   * @param levelIndex Índice del nivel
-   */
-  getDynamicLevelLabel(levelIndex: number): string {
-    // Nivel 1
-    if (levelIndex === 0) {
-      const level1 = this.hierarchyLevels()[0] || [];
-      if (level1.length === 0) return 'Nivel 1';
-      const codes = level1.map((c: any) => c.codigo);
-      if (codes.includes('RP') || codes.includes('CSA')) {
-        return 'Tipo de Resultado';
-      }
-      return 'Categoría Principal';
-    }
-
-    // Niveles superiores - Detalle de <Texto del padre>
-    const parentIndex = levelIndex - 1;
-    const parentId = this.selectedClassifications()[parentIndex];
-
-    if (!parentId) return `Nivel ${levelIndex + 1}`;
-
-    const parent = this.managementClassifications().find(c => c.id === Number(parentId));
-    if (!parent) return `Nivel ${levelIndex + 1}`;
-
-    // Para nivel 2, usar labels personalizados según el código del padre
-    if (levelIndex === 1) {
-      const labelMap: Record<string, string> = {
-        'RP': 'Intención de Pago',
-        'CSA': 'Motivo de No Atención',
-        'SC': 'Razón de No Contacto',
-        'GA': 'Tipo de Gestión'
-      };
-      return labelMap[parent.codigo] || `Detalle de ${parent.label}`;
-    }
-
-    // Para nivel 3 en adelante, siempre usar "Detalle de <Texto del padre>"
-    return `Detalle de ${parent.label}`;
+  // Obtener el label dinámico para nivel 2
+  getLevel2Label(): string {
+    if (!this.managementForm.clasificacionNivel1) return 'Nivel 2';
+    const parent = this.managementClassifications().find(c => c.id === +this.managementForm.clasificacionNivel1);
+    if (!parent) return 'Nivel 2';
+    if (parent.codigo === 'RP') return 'Intención de Pago';
+    if (parent.codigo === 'CSA') return 'Motivo de No Atención';
+    if (parent.codigo === 'SC') return 'Razón de No Contacto';
+    if (parent.codigo === 'GA') return 'Tipo de Gestión';
+    return 'Subcategoría';
   }
 
-  /**
-   * Verifica si debe mostrarse un nivel específico
-   * @param levelIndex Índice del nivel
-   */
-  shouldShowLevel(levelIndex: number): boolean {
-    // Siempre mostrar nivel 1 si hay jerarquía
-    if (levelIndex === 0) {
-      return this.usesHierarchicalClassifications();
-    }
-
-    // Para niveles superiores, verificar que el nivel anterior esté seleccionado
-    const previousLevel = levelIndex - 1;
-    const previousValue = this.selectedClassifications()[previousLevel];
-
-    if (!previousValue) return false;
-
-    // Verificar que existan opciones para este nivel
-    const options = this.getClassificationsForLevel(levelIndex);
-    return options.length > 0;
+  // Obtener el label dinámico para nivel 3
+  getLevel3Label(): string {
+    if (!this.managementForm.clasificacionNivel2) return 'Nivel 3';
+    const parent = this.managementClassifications().find(c => c.id === +this.managementForm.clasificacionNivel2);
+    if (!parent) return 'Nivel 3';
+    return 'Detalle Específico';
   }
 
   showPaymentSection(): boolean {

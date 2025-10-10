@@ -85,25 +85,18 @@ export class ApiSystemConfigService {
   isLoaded = signal(false);
 
   // Configuración de tenant/portfolio
-  private currentTenantId?: number;
+  private currentTenantId = 1;
   private currentPortfolioId?: number;
 
   constructor(private http: HttpClient) {
-    // NO cargar datos automáticamente - esperar a que se configure el tenant
-    // El componente llamará a setTenantAndPortfolio() cuando tenga el tenant correcto
+    // Cargar datos inmediatamente al crear el servicio
+    this.loadAllData();
   }
 
   /**
-   * Configura el tenant y portfolio actual y recarga las clasificaciones
+   * Configura el tenant y portfolio actual
    */
   setTenantAndPortfolio(tenantId: number, portfolioId?: number) {
-    console.log(`🔄 Cambiando contexto a tenant ${tenantId}${portfolioId ? ` portfolio ${portfolioId}` : ''}`);
-
-    // IMPORTANTE: Limpiar clasificaciones anteriores ANTES de cambiar el contexto
-    this.tenantClassifications.set([]);
-    this.contactClassifications.set([]);
-    this.managementClassifications.set([]);
-
     this.currentTenantId = tenantId;
     this.currentPortfolioId = portfolioId;
     this.loadTenantClassifications();
@@ -134,19 +127,12 @@ export class ApiSystemConfigService {
    */
   private loadTenantClassifications(): Promise<void> {
     return new Promise((resolve) => {
-      // Si no hay tenant configurado, no intentar cargar
-      if (!this.currentTenantId) {
-        console.log('⚠️ No hay tenant configurado, omitiendo carga de clasificaciones');
-        resolve();
-        return;
-      }
-
       let url = `${environment.apiUrl}/tenants/${this.currentTenantId}/classifications`;
       if (this.currentPortfolioId) {
         url += `?portfolioId=${this.currentPortfolioId}`;
       }
 
-      console.log(`🔄 Cargando clasificaciones para tenant ${this.currentTenantId}${this.currentPortfolioId ? ` y portfolio ${this.currentPortfolioId}` : ''}`);
+      console.log();
       this.http.get<TenantClassificationConfigResource[]>(url)
         .pipe(
           tap(data => {

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test API</title></head>
+<body>
+<h1>Test Classification API</h1>
+<button onclick="testTenant1()">Test TENANT001 (ID=1)</button>
+<button onclick="testFinOh()">Test FIN-OH (ID=2)</button>
+<pre id="output"></pre>
+<script>
+const API_URL = 'http://localhost:8080/api/v1';
+
+async function testTenant1() {
+  const resp = await fetch(`${API_URL}/tenants/1/classifications/type/CONTACT_RESULT`);
+  const data = await resp.json();
+  document.getElementById('output').textContent = `TENANT001 - CONTACT_RESULT:\n${JSON.stringify(data, null, 2)}`;
+}
+
+async function testFinOh() {
+  const resp = await fetch(`${API_URL}/tenants/2/classifications/type/CONTACT_RESULT`);
+  const data = await resp.json();
+  document.getElementById('output').textContent = `FIN-OH - CONTACT_RESULT:\n${JSON.stringify(data, null, 2)}`;
+}
+</script>
+</body>
+</html>

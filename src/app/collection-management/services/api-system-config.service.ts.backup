@@ -29,42 +29,15 @@ export interface CampaignResource {
   isActive: boolean;
 }
 
-export interface ClassificationCatalogResource {
-  id: number;
-  code: string;
-  name: string;
-  classificationType: string;
-  parentClassificationId?: number;
-  hierarchyLevel: number;
-  hierarchyPath: string;
-  description?: string;
-  displayOrder?: number;
-  iconName?: string;
-  colorHex?: string;
-  isSystem: boolean;
-  metadataSchema?: string;
-  isActive: boolean;
-}
-
 export interface TenantClassificationConfigResource {
   id: number;
   tenantId: number;
   portfolioId?: number;
-  classification: ClassificationCatalogResource;
+  classificationId: number;
+  classificationCode: string;
+  classificationName: string;
+  classificationType: string;
   isEnabled: boolean;
-  isRequired: boolean;
-  customName?: string;
-  customOrder?: number;
-  customIcon?: string;
-  customColor?: string;
-  requiresComment: boolean;
-  minCommentLength?: number;
-  requiresAttachment: boolean;
-  requiresFollowupDate: boolean;
-  effectiveName: string;
-  effectiveOrder?: number;
-  effectiveIcon?: string;
-  effectiveColor?: string;
 }
 
 @Injectable({
@@ -85,25 +58,18 @@ export class ApiSystemConfigService {
   isLoaded = signal(false);
 
   // Configuración de tenant/portfolio
-  private currentTenantId?: number;
+  private currentTenantId = 1;
   private currentPortfolioId?: number;
 
   constructor(private http: HttpClient) {
-    // NO cargar datos automáticamente - esperar a que se configure el tenant
-    // El componente llamará a setTenantAndPortfolio() cuando tenga el tenant correcto
+    // Cargar datos inmediatamente al crear el servicio
+    this.loadAllData();
   }
 
   /**
-   * Configura el tenant y portfolio actual y recarga las clasificaciones
+   * Configura el tenant y portfolio actual
    */
   setTenantAndPortfolio(tenantId: number, portfolioId?: number) {
-    console.log(`🔄 Cambiando contexto a tenant ${tenantId}${portfolioId ? ` portfolio ${portfolioId}` : ''}`);
-
-    // IMPORTANTE: Limpiar clasificaciones anteriores ANTES de cambiar el contexto
-    this.tenantClassifications.set([]);
-    this.contactClassifications.set([]);
-    this.managementClassifications.set([]);
-
     this.currentTenantId = tenantId;
     this.currentPortfolioId = portfolioId;
     this.loadTenantClassifications();
@@ -119,9 +85,9 @@ export class ApiSystemConfigService {
 
     // Cargar en paralelo
     Promise.all([
-      // this.loadContactClassifications(),
-      // this.loadManagementClassifications(),
-      // this.loadActiveCampaigns(),
+      this.loadContactClassifications(),
+      this.loadManagementClassifications(),
+      this.loadActiveCampaigns(),
       this.loadTenantClassifications()
     ]).finally(() => {
       this.isLoading.set(false);
@@ -134,19 +100,11 @@ export class ApiSystemConfigService {
    */
   private loadTenantClassifications(): Promise<void> {
     return new Promise((resolve) => {
-      // Si no hay tenant configurado, no intentar cargar
-      if (!this.currentTenantId) {
-        console.log('⚠️ No hay tenant configurado, omitiendo carga de clasificaciones');
-        resolve();
-        return;
-      }
-
-      let url = `${environment.apiUrl}/tenants/${this.currentTenantId}/classifications`;
+      let url = `${this.classificationsUrl}/tenants/${this.currentTenantId}/classifications/enabled`;
       if (this.currentPortfolioId) {
         url += `?portfolioId=${this.currentPortfolioId}`;
       }
 
-      console.log(`🔄 Cargando clasificaciones para tenant ${this.currentTenantId}${this.currentPortfolioId ? ` y portfolio ${this.currentPortfolioId}` : ''}`);
       this.http.get<TenantClassificationConfigResource[]>(url)
         .pipe(
           tap(data => {

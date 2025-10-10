@@ -1,0 +1,56 @@
+--- classification-maintenance.component.ts.orig
++++ classification-maintenance.component.ts
+@@ -97,25 +97,24 @@
+ 
+     this.loading.set(true);
+ 
+-    const request$ = this.selectedType
+-      ? this.classificationService.getClassificationsByType(this.selectedType)
+-      : this.classificationService.getAllClassifications();
++    // CORREGIDO: Cargar solo las clasificaciones habilitadas para este tenant
++    const request\$ = this.selectedType
++      ? this.classificationService.getTenantClassificationsByType(
++          this.selectedTenantId,
++          this.selectedType,
++          this.selectedPortfolioId
++        )
++      : this.classificationService.getTenantClassifications(
++          this.selectedTenantId,
++          this.selectedPortfolioId
++        );
+ 
+     request$.subscribe({
+-      next: (data) => {
+-        this.classifications = data;
+-        this.loadTenantConfigs();
++      next: (configs) => {
++        this.tenantConfigs = configs;
++        // Extraer las clasificaciones desde las configs del tenant
++        this.classifications = configs.map(config => config.classification);
++        this.buildTree();
++        this.loading.set(false);
+       },
+       error: (error) => {
+         this.loading.set(false);
+@@ -125,19 +124,8 @@
+   }
+ 
+   loadTenantConfigs() {
+-    if (!this.selectedTenantId) return;
+-
+-    const request$ = this.selectedType
+-      ? this.classificationService.getTenantClassificationsByType(
+-          this.selectedTenantId,
+-          this.selectedType,
+-          this.selectedPortfolioId
+-        )
+-      : this.classificationService.getTenantClassifications(
+-          this.selectedTenantId,
+-          this.selectedPortfolioId
+-        );
+-
++    // Método vacío - el trabajo se hace ahora en loadClassifications()
++    // Mantenemos este método para no romper las llamadas existentes
+   }
+ 
+   buildTree() {

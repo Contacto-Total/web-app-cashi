@@ -9,8 +9,6 @@ import {
   CreateClassificationCommand,
   UpdateClassificationCommand
 } from '../../models/classification.model';
-import { FieldConfigDialogComponent } from '../field-config-dialog/field-config-dialog.component';
-import { MetadataSchema } from '../../models/field-config.model';
 
 interface ClassificationForm {
   code: string;
@@ -21,13 +19,12 @@ interface ClassificationForm {
   iconName: string;
   colorHex: string;
   isActive: boolean;
-  metadataSchema?: MetadataSchema | null;
 }
 
 @Component({
   selector: 'app-classification-form-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, FieldConfigDialogComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
     <!-- Backdrop -->
     <div class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4 transition-opacity duration-300"
@@ -310,8 +307,6 @@ export class ClassificationFormDialogComponent implements OnInit {
     colorHex: '#3B82F6',
     isActive: true
   };
-
-  showFieldConfig = signal(false);
 
   presetColors = [
     { hex: '#3B82F6', name: 'Azul' },

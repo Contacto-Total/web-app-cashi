@@ -94,16 +94,9 @@ export class ApiSystemConfigService {
   }
 
   /**
-   * Configura el tenant y portfolio actual y recarga las clasificaciones
+   * Configura el tenant y portfolio actual
    */
   setTenantAndPortfolio(tenantId: number, portfolioId?: number) {
-    console.log(`🔄 Cambiando contexto a tenant ${tenantId}${portfolioId ? ` portfolio ${portfolioId}` : ''}`);
-
-    // IMPORTANTE: Limpiar clasificaciones anteriores ANTES de cambiar el contexto
-    this.tenantClassifications.set([]);
-    this.contactClassifications.set([]);
-    this.managementClassifications.set([]);
-
     this.currentTenantId = tenantId;
     this.currentPortfolioId = portfolioId;
     this.loadTenantClassifications();

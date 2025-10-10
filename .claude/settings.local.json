@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/HP/Documents/contacto-total/web-service-cashi/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -64,6 +64,7 @@ export interface UpdateClassificationCommand {
   iconName?: string;
   colorHex?: string;
   isActive?: boolean;
+  metadataSchema?: string;
 }
 
 export interface UpdateClassificationConfigCommand {

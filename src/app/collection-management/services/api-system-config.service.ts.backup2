@@ -29,42 +29,15 @@ export interface CampaignResource {
   isActive: boolean;
 }
 
-export interface ClassificationCatalogResource {
-  id: number;
-  code: string;
-  name: string;
-  classificationType: string;
-  parentClassificationId?: number;
-  hierarchyLevel: number;
-  hierarchyPath: string;
-  description?: string;
-  displayOrder?: number;
-  iconName?: string;
-  colorHex?: string;
-  isSystem: boolean;
-  metadataSchema?: string;
-  isActive: boolean;
-}
-
 export interface TenantClassificationConfigResource {
   id: number;
   tenantId: number;
   portfolioId?: number;
-  classification: ClassificationCatalogResource;
+  classificationId: number;
+  classificationCode: string;
+  classificationName: string;
+  classificationType: string;
   isEnabled: boolean;
-  isRequired: boolean;
-  customName?: string;
-  customOrder?: number;
-  customIcon?: string;
-  customColor?: string;
-  requiresComment: boolean;
-  minCommentLength?: number;
-  requiresAttachment: boolean;
-  requiresFollowupDate: boolean;
-  effectiveName: string;
-  effectiveOrder?: number;
-  effectiveIcon?: string;
-  effectiveColor?: string;
 }
 
 @Injectable({
@@ -85,28 +58,22 @@ export class ApiSystemConfigService {
   isLoaded = signal(false);
 
   // Configuración de tenant/portfolio
-  private currentTenantId?: number;
+  private currentTenantId = 1;
   private currentPortfolioId?: number;
 
   constructor(private http: HttpClient) {
-    // NO cargar datos automáticamente - esperar a que se configure el tenant
-    // El componente llamará a setTenantAndPortfolio() cuando tenga el tenant correcto
+    // Cargar datos inmediatamente al crear el servicio
+    this.loadAllData();
   }
 
   /**
-   * Configura el tenant y portfolio actual y recarga las clasificaciones
+   * Configura el tenant y portfolio actual
    */
   setTenantAndPortfolio(tenantId: number, portfolioId?: number) {
-    console.log(`🔄 Cambiando contexto a tenant ${tenantId}${portfolioId ? ` portfolio ${portfolioId}` : ''}`);
-
-    // IMPORTANTE: Limpiar clasificaciones anteriores ANTES de cambiar el contexto
-    this.tenantClassifications.set([]);
-    this.contactClassifications.set([]);
-    this.managementClassifications.set([]);
-
     this.currentTenantId = tenantId;
     this.currentPortfolioId = portfolioId;
-    this.loadTenantClassifications();
+    // CORREGIDO: Recargar TODAS las clasificaciones cuando cambia el tenant
+    this.loadAllData();
   }
 
   /**
@@ -119,9 +86,9 @@ export class ApiSystemConfigService {
 
     // Cargar en paralelo
     Promise.all([
-      // this.loadContactClassifications(),
-      // this.loadManagementClassifications(),
-      // this.loadActiveCampaigns(),
+      this.loadContactClassifications(),
+      this.loadManagementClassifications(),
+      this.loadActiveCampaigns(),
       this.loadTenantClassifications()
     ]).finally(() => {
       this.isLoading.set(false);
@@ -134,24 +101,27 @@ export class ApiSystemConfigService {
    */
   private loadTenantClassifications(): Promise<void> {
     return new Promise((resolve) => {
-      // Si no hay tenant configurado, no intentar cargar
-      if (!this.currentTenantId) {
-        console.log('⚠️ No hay tenant configurado, omitiendo carga de clasificaciones');
-        resolve();
-        return;
-      }
-
-      let url = `${environment.apiUrl}/tenants/${this.currentTenantId}/classifications`;
+      let url = `${this.classificationsUrl}/tenants/${this.currentTenantId}/classifications`;
       if (this.currentPortfolioId) {
         url += `?portfolioId=${this.currentPortfolioId}`;
       }
 
-      console.log(`🔄 Cargando clasificaciones para tenant ${this.currentTenantId}${this.currentPortfolioId ? ` y portfolio ${this.currentPortfolioId}` : ''}`);
-      this.http.get<TenantClassificationConfigResource[]>(url)
+      this.http.get<any[]>(url)
         .pipe(
-          tap(data => {
-            this.tenantClassifications.set(data);
-            console.log('✅ Clasificaciones del tenant cargadas desde API:', data.length);
+          tap(configs => {
+            // Transformar response del backend al formato esperado
+            const resources = configs.map(config => ({
+              id: config.id,
+              tenantId: config.tenantId,
+              portfolioId: config.portfolioId,
+              classificationId: config.classification.id,
+              classificationCode: config.classification.code,
+              classificationName: config.classification.name,
+              classificationType: config.classification.classificationType,
+              isEnabled: config.isEnabled
+            }));
+            this.tenantClassifications.set(resources);
+            console.log('✅ Clasificaciones del tenant cargadas desde API:', resources.length);
           }),
           catchError(error => {
             console.warn('⚠️ Error cargando clasificaciones del tenant, usando fallback', error);
@@ -167,18 +137,26 @@ export class ApiSystemConfigService {
    */
   private loadContactClassifications(): Promise<void> {
     return new Promise((resolve) => {
-      this.http.get<ContactClassificationResource[]>(`${this.baseUrl}/contact-classifications`)
-        .pipe(
-          tap(data => {
-            this.contactClassifications.set(data);
-            console.log('✅ Tipificaciones de contacto cargadas desde API:', data.length);
-          }),
-          catchError(error => {
-            console.warn('⚠️ Error cargando tipificaciones de contacto, usando fallback', error);
-            return of([]);
-          })
-        )
-        .subscribe(() => resolve());
+      let url = `${this.classificationsUrl}/tenants/${this.currentTenantId}/classifications/type/CONTACT_RESULT`;
+      if (this.currentPortfolioId) {
+        url += `?portfolioId=${this.currentPortfolioId}`;
+      }
+      this.http.get<any[]>(url).pipe(
+        tap(configs => {
+          const classifications = configs.map(config => ({
+            id: config.classification.id,
+            code: config.classification.code,
+            label: config.classification.name,
+            isSuccessful: config.classification.metadataSchema?.includes('"isSuccessful":true') || false
+          }));
+          this.contactClassifications.set(classifications);
+          console.log('✅ Tipificaciones contacto (filtradas):', classifications.length);
+        }),
+        catchError(error => {
+          console.warn('⚠️ Error cargando tipificaciones de contacto, usando fallback', error);
+          return of([]);
+        })
+      ).subscribe(() => resolve());
     });
   }
 
@@ -187,18 +165,33 @@ export class ApiSystemConfigService {
    */
   private loadManagementClassifications(): Promise<void> {
     return new Promise((resolve) => {
-      this.http.get<ManagementClassificationResource[]>(`${this.baseUrl}/management-classifications`)
-        .pipe(
-          tap(data => {
-            this.managementClassifications.set(data);
-            console.log('✅ Tipificaciones de gestión cargadas desde API:', data.length);
-          }),
-          catchError(error => {
-            console.warn('⚠️ Error cargando tipificaciones de gestión, usando fallback', error);
-            return of([]);
-          })
-        )
-        .subscribe(() => resolve());
+      let url = `${this.classificationsUrl}/tenants/${this.currentTenantId}/classifications/type/MANAGEMENT_TYPE`;
+      if (this.currentPortfolioId) {
+        url += `?portfolioId=${this.currentPortfolioId}`;
+      }
+      this.http.get<any[]>(url).pipe(
+        tap(configs => {
+          const classifications = configs.map(config => {
+            const metadata = config.classification.metadataSchema || '{}';
+            return {
+              id: config.classification.id,
+              code: config.classification.code,
+              label: config.classification.name,
+              requiresPayment: metadata.includes('"requiresPayment":true'),
+              requiresSchedule: metadata.includes('"requiresSchedule":true'),
+              requiresFollowUp: metadata.includes('"requiresFollowUp":true'),
+              parentId: config.classification.parentClassificationId,
+              hierarchyLevel: config.classification.hierarchyLevel
+            };
+          });
+          this.managementClassifications.set(classifications);
+          console.log('✅ Tipificaciones gestión (filtradas):', classifications.length);
+        }),
+        catchError(error => {
+          console.warn('⚠️ Error cargando tipificaciones de gestión, usando fallback', error);
+          return of([]);
+        })
+      ).subscribe(() => resolve());
     });
   }
 

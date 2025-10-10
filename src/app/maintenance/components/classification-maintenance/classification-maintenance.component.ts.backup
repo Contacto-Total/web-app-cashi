@@ -97,25 +97,14 @@ export class ClassificationMaintenanceComponent implements OnInit {
 
     this.loading.set(true);
 
-    // Load ONLY tenant-specific configurations, not the global catalog
     const request$ = this.selectedType
-      ? this.classificationService.getTenantClassificationsByType(
-          this.selectedTenantId,
-          this.selectedType,
-          this.selectedPortfolioId
-        )
-      : this.classificationService.getTenantClassifications(
-          this.selectedTenantId,
-          this.selectedPortfolioId
-        );
+      ? this.classificationService.getClassificationsByType(this.selectedType)
+      : this.classificationService.getAllClassifications();
 
     request$.subscribe({
-      next: (configs) => {
-        this.tenantConfigs = configs;
-        // Extract classifications from tenant configs
-        this.classifications = configs.map(config => config.classification);
-        this.buildTree();
-        this.loading.set(false);
+      next: (data) => {
+        this.classifications = data;
+        this.loadTenantConfigs();
       },
       error: (error) => {
         this.loading.set(false);
@@ -125,8 +114,6 @@ export class ClassificationMaintenanceComponent implements OnInit {
   }
 
   loadTenantConfigs() {
-    // This method is now redundant, keeping for backward compatibility
-    // but it's no longer called
     if (!this.selectedTenantId) return;
 
     const request$ = this.selectedType
@@ -180,6 +167,9 @@ export class ClassificationMaintenanceComponent implements OnInit {
         const parent = nodeMap.get(classification.parentClassificationId);
         if (parent) {
           parent.children.push(node);
+        } else {
+          // Si tiene padre pero el padre no está en el array filtrado, tratarlo como root
+          roots.push(node);
         }
       } else {
         roots.push(node);
@@ -351,9 +341,32 @@ export class ClassificationMaintenanceComponent implements OnInit {
       [ClassificationType.MANAGEMENT_TYPE]: 'Tipo de Gestión',
       [ClassificationType.PAYMENT_TYPE]: 'Tipo de Pago',
       [ClassificationType.COMPLAINT_TYPE]: 'Tipo de Reclamo',
+      [ClassificationType.PAYMENT_SCHEDULE]: 'Cronograma de Pago',
       [ClassificationType.CUSTOM]: 'Personalizado'
     };
     return labels[type];
+  }
+
+  // Estado para controlar el modo de edición de orden
+  isOrderEditMode = signal(false);
+  hasPendingOrderChanges = signal(false);
+  private pendingOrderUpdates: Array<{id: number, displayOrder: number}> = [];
+
+  /**
+   * Activa el modo de edición de orden
+   */
+  enableOrderEditMode() {
+    this.isOrderEditMode.set(true);
+  }
+
+  /**
+   * Desactiva el modo de edición de orden sin guardar
+   */
+  disableOrderEditMode() {
+    if (this.hasPendingOrderChanges()) {
+      this.cancelOrderChanges();
+    }
+    this.isOrderEditMode.set(false);
   }
 
   /**
@@ -365,8 +378,8 @@ export class ClassificationMaintenanceComponent implements OnInit {
     // Intercambiar posiciones en el array
     [siblings[index - 1], siblings[index]] = [siblings[index], siblings[index - 1]];
 
-    // Actualizar displayOrder en el backend
-    this.updateOrder(siblings);
+    // Marcar que hay cambios pendientes
+    this.markOrderChanges(siblings);
   }
 
   /**
@@ -378,30 +391,62 @@ export class ClassificationMaintenanceComponent implements OnInit {
     // Intercambiar posiciones en el array
     [siblings[index], siblings[index + 1]] = [siblings[index + 1], siblings[index]];
 
-    // Actualizar displayOrder en el backend
-    this.updateOrder(siblings);
+    // Marcar que hay cambios pendientes
+    this.markOrderChanges(siblings);
   }
 
   /**
-   * Actualiza el orden de los nodos en el backend
+   * Marca que hay cambios pendientes y agrega a la lista de updates
    */
-  private updateOrder(siblings: ClassificationTreeNode[]) {
-    // Actualizar displayOrder (espaciado de 10 para permitir inserciones futuras)
-    const updates = siblings.map((node, index) => ({
-      id: node.classification.id,
-      displayOrder: index * 10
-    }));
+  private markOrderChanges(siblings: ClassificationTreeNode[]) {
+    this.hasPendingOrderChanges.set(true);
 
-    // Guardar en el backend
-    this.classificationService.updateDisplayOrder(updates).subscribe({
+    // Agregar o actualizar los cambios pendientes
+    siblings.forEach((node, index) => {
+      const existingIndex = this.pendingOrderUpdates.findIndex(u => u.id === node.classification.id);
+      const newOrder = index * 10;
+
+      if (existingIndex >= 0) {
+        this.pendingOrderUpdates[existingIndex].displayOrder = newOrder;
+      } else {
+        this.pendingOrderUpdates.push({
+          id: node.classification.id,
+          displayOrder: newOrder
+        });
+      }
+    });
+  }
+
+  /**
+   * Guarda todos los cambios de orden pendientes
+   */
+  saveOrderChanges() {
+    if (this.pendingOrderUpdates.length === 0) return;
+
+    this.classificationService.updateDisplayOrder(this.pendingOrderUpdates).subscribe({
       next: () => {
         this.showSuccessMessage();
+        this.hasPendingOrderChanges.set(false);
+        this.pendingOrderUpdates = [];
+        this.isOrderEditMode.set(false); // Salir del modo de edición
       },
       error: (error) => {
         console.error('Error al actualizar orden:', error);
         // Recargar para revertir cambios visuales
         this.loadClassifications();
+        this.hasPendingOrderChanges.set(false);
+        this.pendingOrderUpdates = [];
       }
     });
   }
+
+  /**
+   * Cancela todos los cambios de orden pendientes
+   */
+  cancelOrderChanges() {
+    this.hasPendingOrderChanges.set(false);
+    this.pendingOrderUpdates = [];
+    this.loadClassifications(); // Recargar para revertir cambios visuales
+  }
+
 }

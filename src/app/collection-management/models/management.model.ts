@@ -2,6 +2,10 @@
 export interface ManagementForm {
   resultadoContacto: string;
   tipoGestion: string;
+  // Campos para compatibilidad con sistema jerárquico (legacy)
+  clasificacionNivel1?: string;
+  clasificacionNivel2?: string;
+  clasificacionNivel3?: string;
   motivoNoPago: string;
   metodoPago: string;
   montoPago: string;

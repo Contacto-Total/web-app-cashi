@@ -160,13 +160,14 @@ export class SystemConfigService {
     const tenantData = this.apiService.tenantClassifications();
     if (tenantData.length > 0) {
       const contactClassifications = tenantData
-        .filter(c => c.classificationType === 'CONTACT_RESULT' && c.isEnabled)
+        .filter(c => c.classification.classificationType === 'CONTACT_RESULT' && c.isEnabled)
         .map(c => ({
-          id: c.classificationCode,
-          codigo: c.classificationCode,
-          label: c.classificationName
+          id: c.classification.id, // Usar ID numérico para comparaciones
+          codigo: c.classification.code,
+          label: c.customName || c.classification.name
         }));
 
+      console.log('✅ Contact classifications from tenant config:', contactClassifications.length);
       if (contactClassifications.length > 0) {
         return contactClassifications;
       }
@@ -180,16 +181,29 @@ export class SystemConfigService {
   getManagementClassifications() {
     // Primero intentar usar clasificaciones habilitadas del tenant
     const tenantData = this.apiService.tenantClassifications();
+    console.log('🔍 Total tenant classifications:', tenantData.length);
+
     if (tenantData.length > 0) {
+      // Debug: mostrar tipos disponibles
+      const types = [...new Set(tenantData.map(c => c.classification.classificationType))];
+      console.log('🔍 Available classification types:', types);
+
+      // Mapear TODAS las clasificaciones habilitadas (el backend ya filtró por tenant/portfolio)
+      // No filtrar por tipo - el tenant decide qué clasificaciones habilitar
       const managementClassifications = tenantData
-        .filter(c => c.classificationType === 'MANAGEMENT_TYPE' && c.isEnabled)
+        .filter(c => c.isEnabled)
         .map(c => ({
-          id: c.classificationCode,
-          codigo: c.classificationCode,
-          label: c.classificationName,
-          requiere_pago: false, // TODO: Agregar esta info al backend
-          requiere_cronograma: false
+          id: c.classification.id, // Usar ID numérico para comparaciones
+          codigo: c.classification.code,
+          label: c.customName || c.classification.name,
+          requiere_pago: false, // TODO: Agregar esta info al backend o parsear metadataSchema
+          requiere_cronograma: false,
+          parentId: c.classification.parentClassificationId,
+          hierarchyLevel: c.classification.hierarchyLevel
         }));
+
+      console.log('✅ Management classifications from tenant config:', managementClassifications.length);
+      console.log('📊 Hierarchy levels found:', [...new Set(managementClassifications.map(c => c.hierarchyLevel))].sort());
 
       if (managementClassifications.length > 0) {
         return managementClassifications;
