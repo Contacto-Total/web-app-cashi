@@ -1,4 +1,4 @@
-import { Component, effect, input, output, signal } from '@angular/core';
+import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -9,6 +9,7 @@ import {
   SelectOption,
   TableColumn
 } from '../../models/field-config.model';
+import { ApiSystemConfigService, FieldTypeResource } from '../../../collection-management/services/api-system-config.service';
 
 @Component({
   selector: 'app-field-config-dialog',
@@ -80,15 +81,9 @@ import {
                             (ngModelChange)="onFieldTypeChange(field)"
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                           >
-                            <option value="text">Texto</option>
-                            <option value="number">Número</option>
-                            <option value="currency">Moneda</option>
-                            <option value="date">Fecha</option>
-                            <option value="datetime">Fecha y Hora</option>
-                            <option value="select">Lista Desplegable</option>
-                            <option value="textarea">Área de Texto</option>
-                            <option value="checkbox">Casilla de Verificación</option>
-                            <option value="table">Tabla/Cronograma</option>
+                            @for (type of fieldTypes(); track type.id) {
+                              <option [value]="type.typeCode">{{ type.typeName }}</option>
+                            }
                           </select>
                         </div>
 
@@ -140,11 +135,9 @@ import {
                                   [(ngModel)]="column.type"
                                   class="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                 >
-                                  <option value="auto-number">Auto-Número</option>
-                                  <option value="text">Texto</option>
-                                  <option value="number">Número</option>
-                                  <option value="currency">Moneda</option>
-                                  <option value="date">Fecha</option>
+                                  @for (colType of columnFieldTypes(); track colType.id) {
+                                    <option [value]="colType.typeCode">{{ colType.typeName }}</option>
+                                  }
                                 </select>
                                 <button
                                   type="button"
@@ -187,7 +180,7 @@ import {
 
               @if (fields().length === 0) {
                 <div class="text-center py-8 text-gray-500 dark:text-gray-400">
-                  <lucide-angular name="file-question" [size]="48" class="mx-auto mb-2 opacity-50"></lucide-angular>
+                  
                   <p>No hay campos configurados</p>
                   <p class="text-sm">Haz clic en "Agregar Campo" para empezar</p>
                 </div>
@@ -234,6 +227,8 @@ import {
   `]
 })
 export class FieldConfigDialogComponent {
+  private apiSystemConfigService = inject(ApiSystemConfigService);
+
   isOpen = input.required<boolean>();
   existingSchema = input<MetadataSchema | null>(null);
 
@@ -241,8 +236,19 @@ export class FieldConfigDialogComponent {
   cancel = output<void>();
 
   fields = signal<FieldConfig[]>([]);
+  fieldTypes = signal<FieldTypeResource[]>([]);
+  columnFieldTypes = signal<FieldTypeResource[]>([]);
 
   constructor() {
+    // Cargar tipos de campo desde el backend
+    this.apiSystemConfigService.getFieldTypesForMainFields().subscribe(types => {
+      this.fieldTypes.set(types);
+    });
+
+    this.apiSystemConfigService.getFieldTypesForTableColumns().subscribe(types => {
+      this.columnFieldTypes.set(types);
+    });
+
     effect(() => {
       const schema = this.existingSchema();
       if (schema && schema.fields) {

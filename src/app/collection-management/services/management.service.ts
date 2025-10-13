@@ -10,12 +10,17 @@ export interface ManagementResource {
   advisorId: string;
   campaignId: string;
   managementDate: string;
-  contactResultCode: string;
-  contactResultDescription: string;
-  managementTypeCode?: string;
-  managementTypeDescription?: string;
-  managementTypeRequiresPayment?: boolean;
-  managementTypeRequiresSchedule?: boolean;
+
+  // Clasificación: Categoría/grupo al que pertenece la tipificación
+  classificationCode: string;
+  classificationDescription: string;
+
+  // Tipificación: Código específico/hoja (último nivel en jerarquía)
+  typificationCode: string;
+  typificationDescription: string;
+  typificationRequiresPayment?: boolean;
+  typificationRequiresSchedule?: boolean;
+
   callDetail?: CallDetailResource;
   paymentDetail?: PaymentDetailResource;
   observations?: string;
@@ -43,13 +48,18 @@ export interface CreateManagementRequest {
   customerId: string;
   advisorId: string;
   campaignId: string;
-  contactResultCode: string;
-  contactResultDescription: string;
-  managementTypeCode?: string;
-  managementTypeDescription?: string;
-  managementTypeRequiresPayment?: boolean;
-  managementTypeRequiresSchedule?: boolean;
+
+  // Clasificación: Categoría/grupo al que pertenece la tipificación
+  classificationCode: string;
+  classificationDescription: string;
+
+  // Tipificación: Código específico/hoja (último nivel en jerarquía)
+  typificationCode: string;
+  typificationDescription: string;
+  typificationRequiresPayment?: boolean;
+  typificationRequiresSchedule?: boolean;
   observations?: string;
+  dynamicFields?: { [key: string]: any }; // Campos dinámicos configurados por clasificación
 }
 
 export interface StartCallRequest {

@@ -3,34 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   LucideAngularModule,
-  Phone,
-  PhoneOff,
-  User,
-  FileText,
-  CreditCard,
-  Calendar,
-  Clock,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  DollarSign,
-  Building,
-  Mail,
-  MapPin,
-  PhoneCall,
-  Save,
-  X,
-  ChevronDown,
-  Search,
-  History,
-  MessageSquare,
-  TrendingUp,
-  Activity,
-  Wallet,
-  Users,
-  BarChart3,
-  Moon,
-  Sun
 } from 'lucide-angular';
 
 import { SystemConfigService } from '../services/system-config.service';
@@ -43,6 +15,8 @@ import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio } from '../../maintenance/models/portfolio.model';
 import { ClassificationService } from '../../maintenance/services/classification.service';
 import { ApiSystemConfigService } from '../services/api-system-config.service';
+import { DynamicFieldRendererComponent } from '../components/dynamic-field-renderer/dynamic-field-renderer.component';
+import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-config.model';
 
 @Component({
   selector: 'app-collection-management',
@@ -50,7 +24,8 @@ import { ApiSystemConfigService } from '../services/api-system-config.service';
   imports: [
     CommonModule,
     FormsModule,
-    LucideAngularModule
+    LucideAngularModule,
+    DynamicFieldRendererComponent
   ],
   template: `
     <div class="h-[100dvh] bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-gray-950 dark:to-black flex flex-col overflow-hidden transition-colors duration-300">
@@ -130,7 +105,6 @@ import { ApiSystemConfigService } from '../services/api-system-config.service';
       </div>
 
       <!-- TEMPORAL: Filtros de Tenant y Portfolio - ABSOLUTE POSITION FLOTANTE para fácil eliminación -->
-      <!-- TODO: ELIMINAR ESTE BLOQUE COMPLETO CUANDO SE MUEVA LA LÓGICA AL LOGIN -->
       @if (tenants.length > 0 || portfolios.length > 0) {
         <div class="fixed top-16 left-4 z-50 flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-500 dark:border-yellow-600 px-3 py-2 rounded-lg shadow-xl text-[10px]">
           <span class="text-yellow-800 dark:text-yellow-200 font-bold">⚠️ TEMP - Testing Only:</span>
@@ -630,6 +604,33 @@ import { ApiSystemConfigService } from '../services/api-system-config.service';
               </div>
             }
 
+            <!-- Sección de Campos Dinámicos - NUEVA -->
+            @if (isLoadingDynamicFields()) {
+              <div class="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 rounded-lg shadow-md p-3">
+                <div class="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400">
+                  <lucide-angular name="clock" [size]="16" class="animate-spin"></lucide-angular>
+                  <span class="text-xs">Cargando campos adicionales...</span>
+                </div>
+              </div>
+            }
+            
+            @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFields().length === 0) {
+              <div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md p-3">
+                <div class="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
+                  <lucide-angular name="alert-circle" [size]="16"></lucide-angular>
+                  <span class="text-xs">Esta clasificación no tiene campos adicionales configurados</span>
+                </div>
+              </div>
+            }
+
+            <!-- Componente de Campos Dinámicos -->
+            @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFieldsSchema()) {
+              <app-dynamic-field-renderer
+                [schema]="dynamicFieldsSchema()"
+                (dataChange)="onDynamicFieldsChange($event)"
+              />
+            }
+
             <!-- Observaciones - COMPACTAS -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-2 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300">
               <label class="block font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
@@ -664,7 +665,7 @@ import { ApiSystemConfigService } from '../services/api-system-config.service';
             <div class="flex gap-2 pt-2">
               <button
                 (click)="saveManagement()"
-                [disabled]="saving() || !managementForm.resultadoContacto"
+                [disabled]="saving() || !isFormValid()"
                 class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
                 @if (saving()) {
@@ -723,14 +724,13 @@ import { ApiSystemConfigService } from '../services/api-system-config.service';
   `]
 })
 export class CollectionManagementPage implements OnInit, OnDestroy {
-  // Signals para estado reactivo
   protected callActive = signal(false);
   protected callDuration = signal(0);
   protected saving = signal(false);
   protected showScheduleDetail = signal(false);
   protected errors = signal<ValidationErrors>({});
   protected showSuccess = signal(false);
-  protected animateEntry = signal(true); // Always true for instant display
+  protected animateEntry = signal(true);
   protected activeTab = signal('cliente');
   protected historialGestiones = signal<Array<{
     fecha: string;
@@ -741,46 +741,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     duracion: string;
   }>>([]);
 
-  // Tenant and Portfolio selection
   selectedTenantId?: number;
   selectedPortfolioId?: number;
   tenants: Tenant[] = [];
   portfolios: Portfolio[] = [];
 
-  // Computed signals
   campaign = computed(() => this.systemConfigService.getCampaign());
   contactClassifications = computed(() => this.systemConfigService.getContactClassifications());
   managementClassifications = computed(() => this.systemConfigService.getManagementClassifications());
 
-  // Clasificaciones en cascada - Nivel 1 (raíz)
-  // Sistema dinámico de clasificaciones jerárquicas (soporta N niveles)
-//   hierarchyLevels = computed(() => {
-//     const all: any[] = this.managementClassifications() as any[];
-//     console.log('🔍 DEBUG hierarchyLevels - Total classifications:', all.length);
-//     console.log('🔍 DEBUG hierarchyLevels - ALL DATA:', JSON.stringify(all, null, 2));
-//     const selectedLevels = this.managementForm.selectedLevels || [];
-//     const levels: any[][] = [];
-//     const roots = all.filter(c => !c.parentId);
-//     console.log('🔍 DEBUG hierarchyLevels - Roots found:', roots.length, JSON.stringify(roots.map(r => ({id: r.id, code: r.codigo, parentId: r.parentId})), null, 2));
-//     if (roots.length > 0) levels.push(roots);
-//     for (let i = 0; i < selectedLevels.length; i++) {
-//       const parentId = selectedLevels[i];
-//       if (parentId !== null && parentId !== undefined) {
-//         const children = all.filter(c => c.parentId && Number(c.parentId) === Number(parentId));
-//         console.log(`🔍 DEBUG hierarchyLevels - Children for parentId ${parentId}:`, children.length);
-//         if (children.length > 0) levels.push(children);
-//         else break;
-//       } else break;
-//     }
-//     console.log('🔍 DEBUG hierarchyLevels - Final levels:', levels.length);
-//     return levels;
-//   });
-
-  // Lista jerárquica de tipificaciones de gestión para el dropdown
   managementClassificationsHierarchical = computed(() => {
     const all: any[] = this.managementClassifications() as any[];
-
-    // Crear mapa de padres e hijos - usar string para IDs ya que vienen como string del backend
     const byId = new Map<string, any>();
     const children = new Map<string, any[]>();
 
@@ -790,7 +761,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       children.set(itemId, []);
     });
 
-    // Construir relaciones padre-hijo
     all.forEach((item: any) => {
       if (item.parentId) {
         const parentIdStr = String(item.parentId);
@@ -801,7 +771,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     });
 
-    // Función recursiva para aplanar con indentación
     const flatten = (items: any[], level: number = 0): any[] => {
       const flattened: any[] = [];
       items.forEach((item: any) => {
@@ -819,7 +788,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       return flattened;
     };
 
-    // Obtener solo las raíces (sin parentId)
     const roots = all.filter((item: any) => !item.parentId);
     return flatten(roots, 0);
   });
@@ -828,14 +796,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   scheduleTypes = computed(() => this.systemConfigService.getScheduleConfig().tipos_cronograma);
   periodicities = computed(() => this.systemConfigService.getScheduleConfig().periodicidades);
 
-  // Tabs configuration
   tabs = [
     { id: 'cliente', label: 'Cliente', icon: 'user' },
     { id: 'cuenta', label: 'Cuenta', icon: 'wallet' },
     { id: 'historial', label: 'Historial', icon: 'history' }
   ];
 
-  // Formularios
   managementForm: ManagementForm = {
     resultadoContacto: '',
     tipoGestion: '',
@@ -853,20 +819,75 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     notasPrivadas: ''
   };
 
-  // Sistema dinámico de clasificaciones jerárquicas (soporta N niveles)
-  // IMPORTANTE: Usar signal para que el computed reaccione a los cambios
   selectedClassifications = signal<string[]>([]);
+  dynamicFields = signal<any[]>([]);
+  dynamicFieldValues = signal<any>({});
+  isLoadingDynamicFields = signal(false);
+  isLeafClassification = signal(false);
+  dynamicFieldsSchema = signal<MetadataSchema | null>(null);
 
-  // Computed para obtener los niveles jerárquicos dinámicamente
+  // Computed para determinar si el formulario es válido y completo para habilitar el botón guardar
+  isFormValid = computed(() => {
+    // 1. Verificar clasificación seleccionada
+    if (this.usesHierarchicalClassifications()) {
+      // Sistema jerárquico: verificar que se haya llegado a una clasificación "hoja"
+      const selected = this.selectedClassifications();
+      if (selected.length === 0 || !selected[selected.length - 1]) {
+        return false; // No hay clasificación seleccionada o la última está vacía
+      }
+
+      // Verificar que sea una clasificación hoja (sin hijos)
+      if (!this.isLeafClassification()) {
+        return false; // Aún hay más niveles por seleccionar
+      }
+    } else {
+      // Sistema simple: verificar resultado de contacto
+      if (!this.managementForm.resultadoContacto) {
+        return false;
+      }
+    }
+
+    // 2. Verificar campos de pago si son requeridos
+    if (this.showPaymentSection()) {
+      if (!this.managementForm.metodoPago || !this.managementForm.montoPago) {
+        return false;
+      }
+    }
+
+    // 3. Verificar campos dinámicos requeridos
+    const schema = this.dynamicFieldsSchema();
+    if (schema && schema.fields && schema.fields.length > 0) {
+      const dynamicValues = this.dynamicFieldValues();
+
+      for (const field of schema.fields) {
+        if (field.required) {
+          const value = dynamicValues[field.id];
+
+          // Campo vacío
+          if (value === undefined || value === null || value === '') {
+            return false;
+          }
+
+          // Tabla sin filas
+          if (field.type === 'table' && (!Array.isArray(value) || value.length === 0)) {
+            return false;
+          }
+        }
+      }
+    }
+
+    // Todo válido
+    return true;
+  });
+
   hierarchyLevels = computed(() => {
     const all = this.managementClassifications();
-    const selected = this.selectedClassifications(); // Leer el signal
+    const selected = this.selectedClassifications();
     const levels: any[][] = [];
 
     console.log('🔍 hierarchyLevels - Total classifications:', all.length);
     console.log('🔍 hierarchyLevels - Selected classifications:', selected);
 
-    // Nivel 1: raíces
     const roots = all.filter(c => c.hierarchyLevel === 1 || !c.parentId);
     console.log('🔍 hierarchyLevels - Roots found:', roots.length, roots.map(r => `${r.codigo} (id:${r.id})`));
 
@@ -874,7 +895,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       levels.push(roots);
     }
 
-    // Niveles subsiguientes basados en selecciones
     for (let i = 0; i < selected.length; i++) {
       const parentId = selected[i];
       console.log(`🔍 hierarchyLevels - Level ${i + 1}: Looking for children of parentId=${parentId}`);
@@ -886,7 +906,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         if (children.length > 0) {
           levels.push(children);
         } else {
-          break; // No hay más niveles
+          break;
         }
       }
     }
@@ -904,7 +924,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     montoInicial: ''
   };
 
-  // Mock data del cliente
   customerData = signal<CustomerData>({
     id_cliente: 'CLI-2025-0087453',
     nombre_completo: 'GARCÍA RODRIGUEZ, CARMEN ROSA',
@@ -952,10 +971,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    // Cargar tenants y portfolios
     this.loadTenants();
-
-    // Cargar historial de gestiones del cliente desde el backend
     this.loadManagementHistory();
   }
 
@@ -1004,7 +1020,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   reloadClassifications() {
     if (!this.selectedTenantId) return;
 
-    // Update tenant and portfolio context in ApiSystemConfigService
     this.apiSystemConfigService.setTenantAndPortfolio(
       this.selectedTenantId,
       this.selectedPortfolioId
@@ -1019,29 +1034,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         console.log('✅ Historial de gestiones cargado:', managements);
         if (managements.length > 0) {
           console.log('📋 Primer management:', managements[0]);
-          console.log('📋 ContactResultDescription:', managements[0].contactResultDescription);
-          console.log('📋 ContactResultCode:', managements[0].contactResultCode);
+          console.log('📋 Clasificación:', managements[0].classificationDescription);
+          console.log('📋 Tipificación:', managements[0].typificationDescription);
         }
 
-        // Transformar datos del backend a formato de UI
         const historial = managements.map(m => {
-          console.log(`Mapeando gestión: code=${m.contactResultCode}, desc=${m.contactResultDescription}`);
+          console.log(`Mapeando gestión: clasificación=${m.classificationCode}, tipificación=${m.typificationCode}`);
           return {
             fecha: this.formatDateTime(m.managementDate),
-            asesor: m.advisorId, // TODO: Cargar nombre completo del asesor
-            resultado: m.contactResultDescription || m.contactResultCode || '-',
-            gestion: m.managementTypeDescription || m.managementTypeCode || '-',
+            asesor: m.advisorId,
+            resultado: m.classificationDescription || m.classificationCode || '-',
+            gestion: m.typificationDescription || m.typificationCode || '-',
             observacion: m.observations || 'Sin observaciones',
             duracion: m.callDetail ? this.calculateCallDuration(m.callDetail) : '00:00:00'
           };
         });
 
-        // Actualizar signal con el historial ordenado por fecha (más reciente primero)
         this.historialGestiones.set(historial);
       },
       error: (error) => {
         console.error('❌ Error al cargar historial de gestiones:', error);
-        // No mostrar error al usuario, solo log - usar historial vacío por defecto
       }
     });
   }
@@ -1111,67 +1123,32 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   onManagementTypeChange() {
-    // Reset related fields when management type changes
   }
 
-//   onLevelChange(levelIndex: number) {
-//     console.log('🔄 Level changed:', levelIndex, 'Value:', this.managementForm.selectedLevels[levelIndex]);
-// 
-//     // Limpiar niveles inferiores cuando cambia un nivel
-//     this.managementForm.selectedLevels = this.managementForm.selectedLevels.slice(0, levelIndex + 1);
-// 
-//     // Actualizar tipoGestion con el último nivel seleccionado
-//     const lastSelected = this.managementForm.selectedLevels[this.managementForm.selectedLevels.length - 1];
-//     if (lastSelected !== null && lastSelected !== undefined) {
-//       this.managementForm.tipoGestion = String(lastSelected);
-//     } else {
-//       this.managementForm.tipoGestion = '';
-//     }
-// 
-//     console.log('📊 Selected levels:', this.managementForm.selectedLevels);
-//     console.log('📊 Hierarchy levels:', this.hierarchyLevels().length);
-//   }
   showManagementType(): boolean {
     return this.managementForm.resultadoContacto === 'CPC' || this.managementForm.resultadoContacto === 'CTT';
   }
 
-  // Detectar si el portfolio usa clasificaciones jerárquicas
   usesHierarchicalClassifications(): boolean {
     const levels = this.hierarchyLevels();
     return levels.length > 0 && levels[0].length > 0;
   }
 
-  // ========================================
-  // NUEVAS FUNCIONES DINÁMICAS PARA N NIVELES
-  // ========================================
-
-  /**
-   * Obtiene las clasificaciones disponibles para un nivel específico
-   * @param levelIndex Índice del nivel (0 = nivel 1, 1 = nivel 2, etc.)
-   */
   getClassificationsForLevel(levelIndex: number): any[] {
     const levels = this.hierarchyLevels();
     return levels[levelIndex] || [];
   }
 
-  /**
-   * Maneja el cambio de selección en cualquier nivel
-   * @param levelIndex Índice del nivel que cambió
-   * @param value Nuevo valor seleccionado
-   */
   onClassificationLevelChange(levelIndex: number, value: string) {
     console.log(`🔄 Level ${levelIndex + 1} changed to:`, value);
 
-    // Crear un NUEVO array (importante para que Angular detecte el cambio en el computed)
     const newSelections = [...this.selectedClassifications()];
     newSelections[levelIndex] = value;
 
-    // Limpiar niveles inferiores y asignar el nuevo array usando .set()
     this.selectedClassifications.set(newSelections.slice(0, levelIndex + 1));
 
     console.log(`✅ Updated selectedClassifications:`, this.selectedClassifications());
 
-    // Actualizar también los campos del formulario legacy (para compatibilidad)
     if (levelIndex === 0) {
       this.managementForm.clasificacionNivel1 = value;
       this.managementForm.clasificacionNivel2 = '';
@@ -1183,22 +1160,80 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.managementForm.clasificacionNivel3 = value;
     }
 
-    // Actualizar tipoGestion con el último nivel seleccionado
     if (value) {
       this.managementForm.tipoGestion = value;
+      this.loadDynamicFields(Number(value));
     } else {
-      // Si se deselecciona, buscar el último nivel válido
       const lastValid = this.selectedClassifications().filter(v => v).pop();
       this.managementForm.tipoGestion = lastValid || '';
+      this.dynamicFields.set([]);
+      this.dynamicFieldValues.set({});
+      this.isLeafClassification.set(false);
     }
   }
 
+  private loadDynamicFields(classificationId: number) {
+    console.log(`📋 Cargando campos dinámicos para clasificación ${classificationId}`);
+
+    this.isLoadingDynamicFields.set(true);
+    this.apiSystemConfigService.getClassificationFields(classificationId).subscribe({
+      next: (response) => {
+        console.log(`✅ Respuesta de campos dinámicos:`, response);
+
+        this.isLeafClassification.set(response.isLeaf);
+        this.dynamicFields.set(response.fields || []);
+
+        // Convertir campos del backend al formato MetadataSchema
+        // Los tipos ya vienen en lowercase desde el backend, no necesitan conversión
+        const fieldConfigs: FieldConfig[] = (response.fields || []).map((field: any) => ({
+          id: field.fieldCode,
+          label: field.fieldName,
+          type: field.fieldType.toLowerCase(), // Asegurar lowercase por compatibilidad
+          required: field.isRequired || false,
+          placeholder: field.description || '',
+          helpText: field.description,
+          displayOrder: field.displayOrder || 0,
+          // Para campos tipo tabla, incluir columnas
+          columns: field.fieldType.toLowerCase() === 'table' && field.columns ? field.columns.map((col: any) => ({
+            id: col.id || col.fieldCode,
+            label: col.label || col.fieldName,
+            type: (col.type || col.fieldType).toLowerCase(), // Asegurar lowercase
+            required: col.required || col.isRequired || false
+          })) : undefined,
+          allowAddRow: field.fieldType.toLowerCase() === 'table',
+          allowDeleteRow: field.fieldType.toLowerCase() === 'table',
+          minRows: field.minRows || 0,
+          maxRows: field.maxRows
+        }));
+
+        const schema: MetadataSchema = {
+          fields: fieldConfigs
+        };
+
+        this.dynamicFieldsSchema.set(schema);
+        this.isLoadingDynamicFields.set(false);
+
+        console.log(`📝 Schema convertido con ${fieldConfigs.length} campos`);
+      },
+      error: (error) => {
+        console.error(`❌ Error cargando campos dinámicos:`, error);
+        this.isLoadingDynamicFields.set(false);
+        this.isLeafClassification.set(false);
+        this.dynamicFields.set([]);
+        this.dynamicFieldsSchema.set(null);
+      }
+    });
+  }
+
   /**
-   * Obtiene el label dinámico para un nivel específico
-   * @param levelIndex Índice del nivel
+   * Maneja cambios en los campos dinámicos del componente
    */
+  onDynamicFieldsChange(data: any) {
+    this.dynamicFieldValues.set(data);
+    console.log('📝 Valores de campos dinámicos actualizados:', data);
+  }
+
   getDynamicLevelLabel(levelIndex: number): string {
-    // Nivel 1
     if (levelIndex === 0) {
       const level1 = this.hierarchyLevels()[0] || [];
       if (level1.length === 0) return 'Nivel 1';
@@ -1209,7 +1244,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       return 'Categoría Principal';
     }
 
-    // Niveles superiores - Detalle de <Texto del padre>
     const parentIndex = levelIndex - 1;
     const parentId = this.selectedClassifications()[parentIndex];
 
@@ -1218,7 +1252,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const parent = this.managementClassifications().find(c => c.id === Number(parentId));
     if (!parent) return `Nivel ${levelIndex + 1}`;
 
-    // Para nivel 2, usar labels personalizados según el código del padre
     if (levelIndex === 1) {
       const labelMap: Record<string, string> = {
         'RP': 'Intención de Pago',
@@ -1229,27 +1262,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       return labelMap[parent.codigo] || `Detalle de ${parent.label}`;
     }
 
-    // Para nivel 3 en adelante, siempre usar "Detalle de <Texto del padre>"
     return `Detalle de ${parent.label}`;
   }
 
-  /**
-   * Verifica si debe mostrarse un nivel específico
-   * @param levelIndex Índice del nivel
-   */
   shouldShowLevel(levelIndex: number): boolean {
-    // Siempre mostrar nivel 1 si hay jerarquía
     if (levelIndex === 0) {
       return this.usesHierarchicalClassifications();
     }
 
-    // Para niveles superiores, verificar que el nivel anterior esté seleccionado
     const previousLevel = levelIndex - 1;
     const previousValue = this.selectedClassifications()[previousLevel];
 
     if (!previousValue) return false;
 
-    // Verificar que existan opciones para este nivel
     const options = this.getClassificationsForLevel(levelIndex);
     return options.length > 0;
   }
@@ -1265,7 +1290,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   generateSchedule() {
-    // Lógica para generar cronograma
     console.log('Generando cronograma...', this.scheduleForm);
   }
 
@@ -1280,41 +1304,71 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     this.saving.set(true);
 
-    // Obtener tipificaciones seleccionadas
-    const contactClassification = this.contactClassifications().find(c => c.id === this.managementForm.resultadoContacto);
-    const managementClassification = this.managementClassifications().find(g => g.id === this.managementForm.tipoGestion);
+    let contactClassification: any;
+    let managementClassification: any;
 
-    // Construir request para crear la gestión
+    if (this.usesHierarchicalClassifications()) {
+      // Sistema jerárquico: obtener clasificación (categoría) y tipificación (hoja)
+      const selected = this.selectedClassifications();
+      const allClassifications = this.managementClassifications();
+
+      // TIPIFICACIÓN: La hoja/leaf (última selección)
+      const lastSelectedId = selected[selected.length - 1];
+      managementClassification = allClassifications.find((c: any) => c.id.toString() === lastSelectedId);
+      console.log('🏷️  Tipificación (hoja/leaf):', managementClassification);
+
+      // CLASIFICACIÓN: La categoría padre de la tipificación
+      // Si la tipificación tiene parent_id, buscar ese parent como clasificación
+      // Si es root (sin parent), usar el mismo como clasificación
+      if (managementClassification?.parentId) {
+        const parentId = managementClassification.parentId;
+        contactClassification = allClassifications.find((c: any) => c.id.toString() === parentId.toString());
+        console.log('📁 Clasificación (categoría):', contactClassification);
+      } else {
+        // Si no tiene padre, usar la misma como clasificación
+        contactClassification = managementClassification;
+        console.log('📁 Clasificación (sin padre, usar misma):', contactClassification);
+      }
+    } else {
+      // Sistema simple
+      contactClassification = this.contactClassifications().find((c: any) => c.id === this.managementForm.resultadoContacto);
+      managementClassification = this.managementClassifications().find((g: any) => g.id === this.managementForm.tipoGestion);
+    }
+
     const request: CreateManagementRequest = {
       customerId: this.customerData().id_cliente,
-      advisorId: 'ADV-001', // TODO: Obtener del contexto de usuario logueado
+      advisorId: 'ADV-001',
       campaignId: this.campaign().id,
-      contactResultCode: contactClassification?.codigo || '',
-      contactResultDescription: contactClassification?.label || '',
-      managementTypeCode: managementClassification?.codigo,
-      managementTypeDescription: managementClassification?.label,
-      managementTypeRequiresPayment: managementClassification?.requiere_pago,
-      managementTypeRequiresSchedule: (managementClassification as ManagementClassification)?.requiere_cronograma,
-      observations: this.managementForm.observaciones
+
+      // Clasificación: Categoría/grupo al que pertenece la tipificación
+      classificationCode: contactClassification?.codigo || '',
+      classificationDescription: contactClassification?.label || '',
+
+      // Tipificación: Código específico/hoja (último nivel en jerarquía)
+      typificationCode: managementClassification?.codigo || '',
+      typificationDescription: managementClassification?.label || '',
+      typificationRequiresPayment: managementClassification?.requiere_pago,
+      typificationRequiresSchedule: (managementClassification as ManagementClassification)?.requiere_cronograma,
+
+      observations: this.managementForm.observaciones,
+      dynamicFields: this.dynamicFieldValues() // Incluir campos dinámicos
     };
 
-    // Guardar en backend
+    console.log('📤 Enviando request con campos dinámicos:', request);
+
     this.managementService.createManagement(request).subscribe({
       next: (response) => {
         console.log('✅ Gestión creada exitosamente:', response);
         this.managementId = response.managementId;
 
-        // Si hay datos de llamada, registrarlos
         if (this.callStartTime && this.callActive()) {
           this.registerCallToBackend(response.managementId);
         }
 
-        // Si hay datos de pago, registrarlos
         if (this.showPaymentSection() && this.managementForm.montoPago) {
           this.registerPaymentToBackend(response.managementId);
         }
 
-        // Actualizar UI local
         this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
       },
       error: (error) => {
@@ -1337,7 +1391,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       next: (response) => {
         console.log('✅ Llamada registrada:', response);
 
-        // Si la llamada ya terminó, registrar fin
         if (!this.callActive()) {
           const endCallRequest: EndCallRequest = {
             endTime: new Date().toISOString()
@@ -1380,10 +1433,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.saving.set(false);
     this.showSuccess.set(true);
 
-    // Recargar historial completo desde el backend para tener datos actualizados
     this.loadManagementHistory();
 
-    // Limpiar formulario
     this.managementForm = {
       resultadoContacto: '',
       tipoGestion: '',
@@ -1401,28 +1452,38 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       notasPrivadas: ''
     };
 
-    // Resetear timer de llamada
     this.callDuration.set(0);
     this.callStartTime = undefined;
 
-    // Cambiar a tab de historial
     this.activeTab.set('historial');
 
-    // Ocultar notificación después de 3 segundos
     setTimeout(() => this.showSuccess.set(false), 3000);
   }
 
   private validateForm(): boolean {
     const newErrors: ValidationErrors = {};
 
-    if (!this.managementForm.resultadoContacto) {
-      newErrors['resultadoContacto'] = 'Requerido';
+    // 1. Validar clasificación (sistema jerárquico o simple)
+    if (this.usesHierarchicalClassifications()) {
+      // Sistema jerárquico: verificar que se haya seleccionado clasificación hoja
+      const selected = this.selectedClassifications();
+      if (selected.length === 0 || !selected[selected.length - 1]) {
+        newErrors['classification'] = 'Debe seleccionar una clasificación';
+      } else if (!this.isLeafClassification()) {
+        newErrors['classification'] = 'Debe completar todos los niveles de clasificación';
+      }
+    } else {
+      // Sistema simple: verificar resultado de contacto
+      if (!this.managementForm.resultadoContacto) {
+        newErrors['resultadoContacto'] = 'Requerido';
+      }
+
+      if (this.showManagementType() && !this.managementForm.tipoGestion) {
+        newErrors['tipoGestion'] = 'Requerido';
+      }
     }
 
-    if (this.showManagementType() && !this.managementForm.tipoGestion) {
-      newErrors['tipoGestion'] = 'Requerido';
-    }
-
+    // 2. Validar campos de pago si son requeridos
     if (this.showPaymentSection()) {
       if (!this.managementForm.metodoPago) {
         newErrors['metodoPago'] = 'Requerido';
@@ -1432,8 +1493,37 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     }
 
+    // 3. Validar campos dinámicos requeridos
+    const schema = this.dynamicFieldsSchema();
+    if (schema && schema.fields && schema.fields.length > 0) {
+      const dynamicValues = this.dynamicFieldValues();
+
+      for (const field of schema.fields) {
+        if (field.required) {
+          const value = dynamicValues[field.id];
+
+          // Verificar si el campo está vacío
+          if (value === undefined || value === null || value === '') {
+            newErrors[`dynamic_${field.id}`] = `${field.label} es requerido`;
+          }
+
+          // Para campos tipo tabla, verificar que tenga al menos una fila
+          if (field.type === 'table' && (!Array.isArray(value) || value.length === 0)) {
+            newErrors[`dynamic_${field.id}`] = `${field.label} debe tener al menos una fila`;
+          }
+        }
+      }
+    }
+
     this.errors.set(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    if (Object.keys(newErrors).length > 0) {
+      console.warn('⚠️ Errores de validación:', newErrors);
+      alert('Por favor complete todos los campos requeridos');
+      return false;
+    }
+
+    return true;
   }
 
   calculateRemaining(): string {
@@ -1452,7 +1542,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const classification = this.contactClassifications().find(c => c.id === id);
     if (!classification) return id;
 
-    // Si el label está vacío o undefined, mostrar solo el código
     const label = classification.label || classification.codigo;
     return `[${classification.codigo}] ${label}`;
   }
@@ -1461,8 +1550,60 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const classification = this.managementClassifications().find(g => g.id === id);
     if (!classification) return id;
 
-    // Si el label está vacío o undefined, mostrar solo el código
     const label = classification.label || classification.codigo;
     return `[${classification.codigo}] ${label}`;
+  }
+
+  getTableRows(fieldCode: string): any[] {
+    const data = this.dynamicFieldValues()[fieldCode];
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return [];
+  }
+
+  addTableRow(fieldCode: string, columns: any[]) {
+    if (!Array.isArray(columns)) {
+      console.error('❌ addTableRow: columns no es un array válido', columns);
+      return;
+    }
+
+    const currentValues = { ...this.dynamicFieldValues() };
+    
+    if (!Array.isArray(currentValues[fieldCode])) {
+      currentValues[fieldCode] = [];
+    }
+
+    const newRow = this.createEmptyTableRow(columns);
+    (currentValues[fieldCode] as any[]).push(newRow);
+
+    this.dynamicFieldValues.set(currentValues);
+  }
+
+  removeTableRow(fieldCode: string, rowIndex: number) {
+    const currentValues = { ...this.dynamicFieldValues() };
+    
+    if (Array.isArray(currentValues[fieldCode])) {
+      (currentValues[fieldCode] as any[]).splice(rowIndex, 1);
+      this.dynamicFieldValues.set(currentValues);
+    }
+  }
+
+  private createEmptyTableRow(columns: any[]): any {
+    const row: any = {};
+    
+    columns.forEach(column => {
+      if (column.type === 'auto-number') {
+        row[column.id] = null;
+      } else if (column.type === 'number' || column.type === 'currency') {
+        row[column.id] = column.defaultValue || 0;
+      } else if (column.type === 'date') {
+        row[column.id] = column.defaultValue || '';
+      } else {
+        row[column.id] = column.defaultValue || '';
+      }
+    });
+    
+    return row;
   }
 }

@@ -1,7 +1,8 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { tap, catchError, of } from 'rxjs';
+import { tap, catchError, of, Observable } from 'rxjs';
+import { ClassificationFieldsResponse } from '../models/dynamic-field.model';
 
 export interface ContactClassificationResource {
   id: number;
@@ -65,6 +66,29 @@ export interface TenantClassificationConfigResource {
   effectiveOrder?: number;
   effectiveIcon?: string;
   effectiveColor?: string;
+}
+
+/**
+ * Recurso de tipo de campo
+ *
+ * @backend Esta interface mapea con:
+ * @backend com.cashi.systemconfiguration.interfaces.rest.controllers.FieldTypeController.FieldTypeResource
+ *
+ * Los datos provienen de la entidad:
+ * @backend com.cashi.shared.domain.model.entities.FieldTypeCatalog
+ *
+ * Y son sedeados automáticamente en:
+ * @backend com.cashi.systemconfiguration.infrastructure.persistence.DataSeeder.seedFieldTypes()
+ */
+export interface FieldTypeResource {
+  id: number;
+  typeCode: string;        // Código único del tipo (text, number, table, etc.)
+  typeName: string;        // Nombre legible (Texto, Número, Tabla, etc.)
+  description?: string;    // Descripción del tipo de campo
+  icon?: string;           // Nombre del icono de Lucide Angular
+  availableForMainField: boolean;    // Disponible para campos principales
+  availableForTableColumn: boolean;  // Disponible para columnas de tabla
+  displayOrder: number;    // Orden de visualización en el UI
 }
 
 @Injectable({
@@ -267,5 +291,83 @@ export class ApiSystemConfigService {
       nombre: campaigns[0].name,
       tipo: campaigns[0].campaignType
     } : null;
+  }
+
+  /**
+   * Obtiene los campos dinámicos configurados para una clasificación específica
+   * Solo las clasificaciones "hoja" (sin hijos) deberían tener campos
+   */
+  getClassificationFields(classificationId: number): Observable<ClassificationFieldsResponse> {
+    if (!this.currentTenantId) {
+      throw new Error('No hay tenant configurado');
+    }
+
+    let url = `${environment.apiUrl}/tenants/${this.currentTenantId}/classifications/${classificationId}/fields`;
+    if (this.currentPortfolioId) {
+      url += `?portfolioId=${this.currentPortfolioId}`;
+    }
+
+    console.log(`🔄 Cargando campos dinámicos para clasificación ${classificationId}`);
+    return this.http.get<ClassificationFieldsResponse>(url).pipe(
+      tap(response => {
+        console.log(`✅ Campos dinámicos cargados:`, response);
+        console.log(`   - Es hoja: ${response.isLeaf}`);
+        console.log(`   - Cantidad de campos: ${response.fields.length}`);
+      }),
+      catchError(error => {
+        console.error('❌ Error cargando campos dinámicos:', error);
+        // Retornar respuesta vacía en caso de error
+        return of({
+          classificationId,
+          isLeaf: false,
+          fields: []
+        } as ClassificationFieldsResponse);
+      })
+    );
+  }
+
+  /**
+   * Obtiene todos los tipos de campo disponibles
+   */
+  getAllFieldTypes(): Observable<FieldTypeResource[]> {
+    const url = `${environment.apiUrl}/field-types`;
+    console.log('🔄 Cargando tipos de campo disponibles');
+    return this.http.get<FieldTypeResource[]>(url).pipe(
+      tap(types => console.log(`✅ Tipos de campo cargados:`, types.length)),
+      catchError(error => {
+        console.error('❌ Error cargando tipos de campo:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Obtiene tipos de campo disponibles para campos principales
+   */
+  getFieldTypesForMainFields(): Observable<FieldTypeResource[]> {
+    const url = `${environment.apiUrl}/field-types/main-fields`;
+    console.log('🔄 Cargando tipos de campo para campos principales');
+    return this.http.get<FieldTypeResource[]>(url).pipe(
+      tap(types => console.log(`✅ Tipos para campos principales:`, types.length)),
+      catchError(error => {
+        console.error('❌ Error cargando tipos para campos principales:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Obtiene tipos de campo disponibles para columnas de tabla
+   */
+  getFieldTypesForTableColumns(): Observable<FieldTypeResource[]> {
+    const url = `${environment.apiUrl}/field-types/table-columns`;
+    console.log('🔄 Cargando tipos de campo para columnas de tabla');
+    return this.http.get<FieldTypeResource[]>(url).pipe(
+      tap(types => console.log(`✅ Tipos para columnas de tabla:`, types.length)),
+      catchError(error => {
+        console.error('❌ Error cargando tipos para columnas de tabla:', error);
+        return of([]);
+      })
+    );
   }
 }

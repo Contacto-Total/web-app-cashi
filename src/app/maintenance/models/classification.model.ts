@@ -55,6 +55,7 @@ export interface CreateClassificationCommand {
   iconName?: string;
   colorHex?: string;
   isSystem?: boolean;
+  metadataSchema?: string;
 }
 
 export interface UpdateClassificationCommand {

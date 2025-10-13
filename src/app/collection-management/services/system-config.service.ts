@@ -158,6 +158,8 @@ export class SystemConfigService {
   getContactClassifications() {
     // Primero intentar usar clasificaciones habilitadas del tenant
     const tenantData = this.apiService.tenantClassifications();
+    console.log('🔍 DEBUG: tenantData.length =', tenantData.length);
+
     if (tenantData.length > 0) {
       const contactClassifications = tenantData
         .filter(c => c.classification.classificationType === 'CONTACT_RESULT' && c.isEnabled)
@@ -173,9 +175,14 @@ export class SystemConfigService {
       }
     }
 
-    // Si no hay configuraciones de tenant, usar API general
+    // Si no hay configuraciones de tenant, usar API general o fallback
     const apiData = this.apiService.getContactClassificationsForUI();
-    return apiData.length > 0 ? apiData : this.systemConfig.tipificaciones.contacto;
+    console.log('🔍 DEBUG: apiData.length =', apiData.length);
+    console.log('🔍 DEBUG: fallback.length =', this.systemConfig.tipificaciones.contacto.length);
+
+    const result = apiData.length > 0 ? apiData : this.systemConfig.tipificaciones.contacto;
+    console.log('✅ Returning contact classifications:', result.length, result);
+    return result;
   }
 
   getManagementClassifications() {

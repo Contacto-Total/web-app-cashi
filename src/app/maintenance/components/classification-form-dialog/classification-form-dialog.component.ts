@@ -146,7 +146,7 @@ interface ClassificationForm {
                     [style.background-color]="color.hex"
                     [title]="color.name">
                     @if (form.colorHex === color.hex) {
-                      <lucide-angular name="check" [size]="20" class="text-white drop-shadow-lg"></lucide-angular>
+                      <lucide-angular name="check-circle" [size]="20" class="text-white drop-shadow-lg"></lucide-angular>
                     }
                   </button>
                 }
@@ -225,7 +225,7 @@ interface ClassificationForm {
               class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 text-sm"
             />
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
-              <lucide-angular name="lightbulb" [size]="12"></lucide-angular>
+              <lucide-angular name="alert-circle" [size]="12"></lucide-angular>
               Tip: Usa múltiplos de 10 (10, 20, 30...) para facilitar inserciones futuras
             </p>
           </div>
@@ -263,28 +263,50 @@ interface ClassificationForm {
         </div>
 
         <!-- Footer -->
-        <div class="sticky bottom-0 bg-gray-50 dark:bg-slate-800 px-6 py-4 flex justify-end gap-3 rounded-b-lg border-t border-gray-200 dark:border-gray-700">
+        <div class="sticky bottom-0 bg-gray-50 dark:bg-slate-800 px-6 py-4 flex justify-between items-center rounded-b-lg border-t border-gray-200 dark:border-gray-700">
+          <!-- Left side: Configure Fields button -->
           <button
-            (click)="onCancel()"
-            class="px-6 py-2.5 text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-semibold transition-colors flex items-center gap-2 text-sm">
-            <lucide-angular name="x" [size]="18"></lucide-angular>
-            Cancelar
+            type="button"
+            (click)="openFieldConfig()"
+            class="px-4 py-2.5 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-300 dark:border-indigo-800 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-semibold transition-colors flex items-center gap-2 text-sm">
+            <lucide-angular name="settings" [size]="18"></lucide-angular>
+            Configurar Campos Dinámicos
           </button>
-          <button
-            (click)="onSave()"
-            [disabled]="saving()"
-            class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm">
-            @if (saving()) {
-              <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Guardando...
-            } @else {
-              <lucide-angular name="save" [size]="18"></lucide-angular>
-              Guardar
-            }
-          </button>
+
+          <!-- Right side: Cancel and Save buttons -->
+          <div class="flex gap-3">
+            <button
+              (click)="onCancel()"
+              class="px-6 py-2.5 text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-semibold transition-colors flex items-center gap-2 text-sm">
+              <lucide-angular name="x" [size]="18"></lucide-angular>
+              Cancelar
+            </button>
+            <button
+              (click)="onSave()"
+              [disabled]="saving()"
+              class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm">
+              @if (saving()) {
+                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Guardando...
+              } @else {
+                <lucide-angular name="save" [size]="18"></lucide-angular>
+                Guardar
+              }
+            </button>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Field Config Dialog -->
+    @if (showFieldConfig()) {
+      <app-field-config-dialog
+        [isOpen]="showFieldConfig()"
+        [existingSchema]="form.metadataSchema || null"
+        (save)="onFieldConfigSave($event)"
+        (cancel)="onFieldConfigCancel()"
+      />
+    }
   `
 })
 export class ClassificationFormDialogComponent implements OnInit {
@@ -347,12 +369,9 @@ export class ClassificationFormDialogComponent implements OnInit {
     { name: 'mail', label: 'Correo' },
     { name: 'message-square', label: 'Mensaje' },
     { name: 'file-text', label: 'Documento' },
-    { name: 'home', label: 'Casa' },
-    { name: 'briefcase', label: 'Maletín' },
-    { name: 'trending-up', label: 'Tendencia' },
-    { name: 'thumbs-up', label: 'Me gusta' },
-    { name: 'thumbs-down', label: 'No me gusta' },
-    { name: 'star', label: 'Estrella' }
+    { name: 'building', label: 'Casa' },
+    { name: 'wallet', label: 'Maletín' },
+    { name: 'trending-up', label: 'Tendencia' }
   ];
 
   saving = signal(false);
@@ -376,7 +395,10 @@ export class ClassificationFormDialogComponent implements OnInit {
         displayOrder: this.classification.displayOrder || 0,
         iconName: this.classification.iconName || '',
         colorHex: this.classification.colorHex || '#3B82F6',
-        isActive: this.classification.isActive
+        isActive: this.classification.isActive,
+        metadataSchema: this.classification.metadataSchema
+          ? JSON.parse(this.classification.metadataSchema)
+          : null
       };
     }
   }
@@ -421,13 +443,39 @@ export class ClassificationFormDialogComponent implements OnInit {
       description: this.form.description.trim() || undefined,
       displayOrder: this.form.displayOrder,
       iconName: this.form.iconName.trim() || undefined,
-      colorHex: this.form.colorHex || undefined
+      colorHex: this.form.colorHex || undefined,
+      metadataSchema: this.form.metadataSchema ? JSON.stringify(this.form.metadataSchema) : undefined
     };
 
     this.classificationService.createClassification(command).subscribe({
       next: (created) => {
-        this.saving.set(false);
-        this.save.emit(created);
+        console.log('✅ Clasificación creada:', created);
+
+        // Auto-habilitar para el tenant actual
+        if (this.tenantId) {
+          console.log(`🔄 Auto-habilitando clasificación ${created.id} para tenant ${this.tenantId}`);
+          this.classificationService.enableClassification(
+            this.tenantId,
+            created.id,
+            this.portfolioId
+          ).subscribe({
+            next: () => {
+              console.log('✅ Clasificación auto-habilitada para el tenant');
+              this.saving.set(false);
+              this.save.emit(created);
+            },
+            error: (error) => {
+              console.error('⚠️ Error al auto-habilitar (pero la clasificación se creó):', error);
+              // Aunque falle el enable, la clasificación se creó exitosamente
+              this.saving.set(false);
+              this.save.emit(created);
+            }
+          });
+        } else {
+          // Si no hay tenantId, solo emitir el evento de guardado
+          this.saving.set(false);
+          this.save.emit(created);
+        }
       },
       error: (error) => {
         console.error('Error al crear tipificación:', error);
@@ -446,7 +494,8 @@ export class ClassificationFormDialogComponent implements OnInit {
       displayOrder: this.form.displayOrder,
       iconName: this.form.iconName.trim() || undefined,
       colorHex: this.form.colorHex || undefined,
-      isActive: this.form.isActive
+      isActive: this.form.isActive,
+      metadataSchema: this.form.metadataSchema ? JSON.stringify(this.form.metadataSchema) : undefined
     };
 
     this.classificationService.updateClassification(this.classification.id, command).subscribe({
@@ -474,5 +523,21 @@ export class ClassificationFormDialogComponent implements OnInit {
       return `Nueva Tipificación - Nivel ${this.parentClassification.hierarchyLevel + 1}`;
     }
     return 'Nueva Tipificación - Nivel 1';
+  }
+
+  openFieldConfig() {
+    console.log('🔧 Abriendo configuración de campos dinámicos');
+    this.showFieldConfig.set(true);
+  }
+
+  onFieldConfigSave(schema: MetadataSchema) {
+    console.log('💾 Guardando configuración de campos:', schema);
+    this.form.metadataSchema = schema;
+    this.showFieldConfig.set(false);
+  }
+
+  onFieldConfigCancel() {
+    console.log('❌ Cancelando configuración de campos');
+    this.showFieldConfig.set(false);
   }
 }

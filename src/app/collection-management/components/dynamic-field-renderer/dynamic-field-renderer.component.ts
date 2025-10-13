@@ -64,7 +64,7 @@ import {
             <!-- Currency Input -->
             @if (field.type === 'currency') {
               <div class="relative">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">S/.</span>
                 <input
                   type="number"
                   [(ngModel)]="fieldData()[field.id]"
@@ -303,6 +303,7 @@ export class DynamicFieldRendererComponent {
 
   getTableRows(fieldId: string): any[] {
     const data = this.fieldData()[fieldId];
+    console.log('Table rows:', data);
     if (Array.isArray(data)) {
       return data;
     }
