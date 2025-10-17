@@ -3,6 +3,7 @@ export enum ClassificationType {
   MANAGEMENT_TYPE = 'MANAGEMENT_TYPE',
   PAYMENT_TYPE = 'PAYMENT_TYPE',
   COMPLAINT_TYPE = 'COMPLAINT_TYPE',
+  PAYMENT_SCHEDULE = 'PAYMENT_SCHEDULE',
   CUSTOM = 'CUSTOM'
 }
 
@@ -23,6 +24,10 @@ export interface ClassificationCatalog {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  // Campos del tipo de clasificación
+  suggestsFullAmount?: boolean | null;
+  allowsInstallmentSelection?: boolean | null;
+  requiresManualAmount?: boolean | null;
 }
 
 export interface TenantClassificationConfig {

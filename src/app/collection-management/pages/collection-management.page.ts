@@ -1,12 +1,14 @@
-import { Component, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   LucideAngularModule,
 } from 'lucide-angular';
+import { catchError, of } from 'rxjs';
 
 import { SystemConfigService } from '../services/system-config.service';
 import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest } from '../services/management.service';
+import { PaymentScheduleService } from '../services/payment-schedule.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { ManagementClassification } from '../models/system-config.model';
 import { CustomerData } from '../models/customer.model';
@@ -17,6 +19,8 @@ import { ClassificationService } from '../../maintenance/services/classification
 import { ApiSystemConfigService } from '../services/api-system-config.service';
 import { DynamicFieldRendererComponent } from '../components/dynamic-field-renderer/dynamic-field-renderer.component';
 import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-config.model';
+import { CustomerOutputConfigService } from '../../maintenance/services/customer-output-config.service';
+import { PaymentScheduleViewComponent } from '../components/payment-schedule-view/payment-schedule-view.component';
 
 @Component({
   selector: 'app-collection-management',
@@ -25,7 +29,8 @@ import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-conf
     CommonModule,
     FormsModule,
     LucideAngularModule,
-    DynamicFieldRendererComponent
+    DynamicFieldRendererComponent,
+    PaymentScheduleViewComponent
   ],
   template: `
     <div class="h-[100dvh] bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-gray-950 dark:to-black flex flex-col overflow-hidden transition-colors duration-300">
@@ -212,47 +217,58 @@ import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-conf
             <div>
               @if (activeTab() === 'cliente') {
                 <div class="space-y-2">
-                  <div class="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-lg p-2">
-                    <div class="text-[10px] font-bold text-blue-800 dark:text-blue-100 mb-1 flex items-center gap-1">
-                      <lucide-angular name="user" [size]="10"></lucide-angular>
-                      Datos Personales
-                    </div>
-                    <div class="space-y-1 text-[10px]">
-                      <div class="flex justify-between">
-                        <span class="text-blue-700 dark:text-blue-200">Edad:</span>
-                        <span class="font-bold text-blue-900 dark:text-white">{{ customerData().edad }} años</span>
+                  <!-- Grid dinámico de campos configurables -->
+                  <div class="grid grid-cols-4 gap-2">
+                    @for (field of customerOutputFields(); track field.id) {
+                      <div
+                        class="rounded-lg border p-2 transition-all"
+                        [class.col-span-1]="!field.size || field.size === 'small'"
+                        [class.col-span-2]="field.size === 'medium'"
+                        [class.col-span-3]="field.size === 'large'"
+                        [class.col-span-4]="field.size === 'full'"
+                        [class.bg-cyan-50]="field.highlight && !themeService.isDarkMode()"
+                        [class.dark:bg-cyan-950/30]="field.highlight && themeService.isDarkMode()"
+                        [class.border-cyan-300]="field.highlight && !themeService.isDarkMode()"
+                        [class.dark:border-cyan-900/50]="field.highlight && themeService.isDarkMode()"
+                        [class.bg-slate-50]="!field.highlight && !themeService.isDarkMode()"
+                        [class.dark:bg-slate-900/50]="!field.highlight && themeService.isDarkMode()"
+                        [class.border-slate-200]="!field.highlight && !themeService.isDarkMode()"
+                        [class.dark:border-slate-700]="!field.highlight && themeService.isDarkMode()"
+                      >
+                        <div class="flex items-start justify-between gap-2">
+                          <div class="flex-1 min-w-0">
+                            <div
+                              class="text-[9px] font-bold uppercase tracking-wide mb-0.5 flex items-center gap-1"
+                              [class.text-cyan-800]="field.highlight && !themeService.isDarkMode()"
+                              [class.dark:text-cyan-100]="field.highlight && themeService.isDarkMode()"
+                              [class.text-slate-600]="!field.highlight && !themeService.isDarkMode()"
+                              [class.dark:text-slate-400]="!field.highlight && themeService.isDarkMode()">
+                              @if (field.highlight) {
+                                <lucide-angular name="star" [size]="8"></lucide-angular>
+                              }
+                              {{ field.label }}
+                            </div>
+                            <div
+                              class="text-[11px] font-bold break-words"
+                              [class.text-cyan-900]="field.highlight && !themeService.isDarkMode()"
+                              [class.dark:text-cyan-50]="field.highlight && themeService.isDarkMode()"
+                              [class.text-slate-900]="!field.highlight && !themeService.isDarkMode()"
+                              [class.dark:text-white]="!field.highlight && themeService.isDarkMode()">
+                              {{ formatFieldValue(getFieldValue(field.field), field.format) }}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div class="flex justify-between">
-                        <span class="text-blue-700 dark:text-blue-200">F. Nac:</span>
-                        <span class="font-bold text-blue-900 dark:text-white">{{ customerData().fecha_nacimiento }}</span>
-                      </div>
-                    </div>
+                    }
                   </div>
 
-                  <div class="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 rounded-lg p-2">
-                    <div class="text-[10px] font-bold text-green-800 dark:text-green-100 mb-1 flex items-center gap-1">
-                      <lucide-angular name="phone-call" [size]="10"></lucide-angular>
-                      Contacto
+                  @if (customerOutputFields().length === 0) {
+                    <div class="text-center py-4 text-slate-500 dark:text-slate-400 text-xs">
+                      <lucide-angular name="alert-circle" [size]="16" class="mx-auto mb-2"></lucide-angular>
+                      <p>No hay campos configurados para mostrar</p>
+                      <p class="text-[10px] mt-1">Configure los campos en Mantenimiento > Salidas de Cliente</p>
                     </div>
-                    <div class="space-y-1 text-[10px]">
-                      <div class="bg-white dark:bg-gray-800/50 rounded p-1">
-                        <div class="text-green-700 dark:text-green-200">Tel. Principal</div>
-                        <div class="font-bold text-green-900 dark:text-white">{{ customerData().contacto.telefono_principal }}</div>
-                      </div>
-                      <div class="bg-white dark:bg-gray-800/50 rounded p-1">
-                        <div class="text-green-700 dark:text-green-200">Tel. Alt.</div>
-                        <div class="font-bold text-green-900 dark:text-white">{{ customerData().contacto.telefono_alternativo }}</div>
-                      </div>
-                      <div class="bg-white dark:bg-gray-800/50 rounded p-1">
-                        <div class="text-green-700 dark:text-green-200">Email</div>
-                        <div class="font-bold text-green-900 dark:text-white break-all">{{ customerData().contacto.email }}</div>
-                      </div>
-                      <div class="bg-white dark:bg-gray-800/50 rounded p-1">
-                        <div class="text-green-700 dark:text-green-200">Dirección</div>
-                        <div class="font-semibold text-green-900 dark:text-white leading-snug">{{ customerData().contacto.direccion }}</div>
-                      </div>
-                    </div>
-                  </div>
+                  }
                 </div>
               }
 
@@ -322,7 +338,24 @@ import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-conf
               @if (activeTab() === 'historial') {
                 <div class="space-y-2">
                   @if (historialGestiones().length === 0) {
-                    <p class="text-sm text-gray-500 dark:text-gray-100">Sin gestiones previas</p>
+                    <div class="text-center py-8 space-y-3">
+                      <lucide-angular name="inbox" [size]="48" class="mx-auto text-gray-300 dark:text-gray-600"></lucide-angular>
+                      <div>
+                        <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Sin gestiones previas</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          No hay gestiones registradas para este cliente
+                        </p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                          Cliente: {{ customerData().id_cliente }}
+                        </p>
+                      </div>
+                      <button
+                        (click)="loadManagementHistory()"
+                        class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors flex items-center gap-2 mx-auto">
+                        <lucide-angular name="refresh-cw" [size]="14"></lucide-angular>
+                        Recargar Historial
+                      </button>
+                    </div>
                   } @else {
                     @for (gestion of historialGestiones(); track $index) {
                       <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
@@ -338,6 +371,33 @@ import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-conf
                           <div class="font-semibold text-green-700 dark:text-green-200 bg-green-50 dark:bg-green-950/30 px-2 py-0.5 rounded inline-block ml-1">{{ gestion.gestion }}</div>
                           <div class="text-[9px] text-gray-600 dark:text-gray-100 italic mt-1 bg-white dark:bg-gray-900 p-1 rounded leading-tight">{{ gestion.observacion }}</div>
                           <div class="text-[9px] text-gray-500 dark:text-gray-100">Duración: {{ gestion.duracion }}</div>
+
+                          <!-- Cronograma de pagos -->
+                          @if (gestion.schedule) {
+                            <div class="mt-2 p-2 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded">
+                              <div class="flex items-center justify-between gap-1 mb-1">
+                                <div class="flex items-center gap-1">
+                                  <lucide-angular name="calendar" [size]="10" class="text-purple-600 dark:text-purple-400"></lucide-angular>
+                                  <span class="text-[9px] font-bold text-purple-900 dark:text-purple-200 uppercase">Cronograma</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  (click)="openScheduleDetail(gestion.managementId)"
+                                  class="text-[8px] px-1.5 py-0.5 bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors font-bold">
+                                  Ver Detalle
+                                </button>
+                              </div>
+                              <div class="text-[9px] text-purple-800 dark:text-purple-300">
+                                <div class="flex justify-between">
+                                  <span>Cuotas: {{ gestion.schedule.numberOfInstallments }}</span>
+                                  <span class="font-bold">S/ {{ gestion.schedule.totalAmount | number:'1.2-2' }}</span>
+                                </div>
+                                <div class="text-[8px] text-purple-600 dark:text-purple-400 mt-0.5">
+                                  {{ gestion.schedule.installments.length }} cuota(s) registrada(s)
+                                </div>
+                              </div>
+                            </div>
+                          }
                         </div>
                       </div>
                     }
@@ -452,158 +512,6 @@ import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-conf
               }
             }
 
-            <!-- Sección de Pago - COMPACTA -->
-            @if (showPaymentSection()) {
-              <div class="bg-green-50 border border-green-400 rounded-lg shadow-md p-2">
-                <h3 class="font-bold text-gray-800 mb-2 flex items-center gap-2 text-[11px]">
-                  <div class="p-1 bg-green-500 rounded">
-                    <lucide-angular name="credit-card" [size]="12" class="text-white"></lucide-angular>
-                  </div>
-                  Registro de Pago
-                </h3>
-
-                <div class="grid grid-cols-2 gap-2 mb-2">
-                  <div>
-                    <label class="block text-[10px] font-bold text-gray-700 mb-1 flex items-center gap-1">
-                      <div class="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                      Método *
-                    </label>
-                    <div class="relative">
-                      <select
-                        [(ngModel)]="managementForm.metodoPago"
-                        [class]="'w-full p-1.5 pr-6 border rounded font-semibold text-gray-700 appearance-none cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-200 text-[10px] ' +
-                          (errors().metodoPago ? 'border-red-500 bg-red-50' : 'border-green-400 bg-white')"
-                      >
-                        <option value="">-- Método --</option>
-                        @for (metodo of paymentMethods(); track metodo.id) {
-                          <option [value]="metodo.id">{{ metodo.icono }} [{{ metodo.codigo }}] {{ metodo.label }}</option>
-                        }
-                      </select>
-                      <lucide-angular name="chevron-down" [size]="12" class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></lucide-angular>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label class="block text-[10px] font-bold text-gray-700 mb-1 flex items-center gap-1">
-                      <div class="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                      Monto (S/) *
-                    </label>
-                    <input
-                      type="number"
-                      [(ngModel)]="managementForm.montoPago"
-                      placeholder="0.00"
-                      step="0.01"
-                      [class]="'w-full p-1.5 border rounded font-bold text-xs text-gray-700 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-200 ' +
-                        (errors().montoPago ? 'border-red-500 bg-red-50' : 'border-green-400 bg-white')"
-                    />
-                  </div>
-                </div>
-
-                <div class="bg-white rounded p-1.5 border border-green-300">
-                  <div class="flex items-center justify-between text-[10px]">
-                    <span class="text-gray-700 font-semibold">Deuda:</span>
-                    <span class="font-bold text-red-600">S/ {{ customerData().deuda.saldo_total.toFixed(2) }}</span>
-                  </div>
-                  @if (managementForm.montoPago) {
-                    <div class="flex items-center justify-between text-[10px] mt-1 pt-1 border-t border-green-200">
-                      <span class="text-gray-700 font-semibold">Restante:</span>
-                      <span class="font-bold text-orange-600">S/ {{ calculateRemaining() }}</span>
-                    </div>
-                  }
-                </div>
-              </div>
-            }
-
-            <!-- Sección de Cronograma - NUEVA -->
-            @if (showScheduleSection()) {
-              <div class="bg-purple-50 border border-purple-400 rounded-lg shadow-md p-2">
-                <h3 class="font-bold text-gray-800 mb-2 flex items-center gap-2 text-[11px]">
-                  <div class="p-1 bg-purple-500 rounded">
-                    <lucide-angular name="calendar" [size]="12" class="text-white"></lucide-angular>
-                  </div>
-                  Cronograma de Pago
-                </h3>
-
-                <div class="grid grid-cols-3 gap-2 mb-2">
-                  <div>
-                    <label class="block text-[10px] font-bold text-gray-700 mb-1">Tipo</label>
-                    <select
-                      [(ngModel)]="scheduleForm.tipoCronograma"
-                      class="w-full p-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:border-purple-500 focus:ring-purple-200"
-                    >
-                      <option value="">Seleccionar...</option>
-                      @for (tipo of scheduleTypes(); track tipo.id) {
-                        <option [value]="tipo.id">{{ tipo.label }}</option>
-                      }
-                    </select>
-                  </div>
-
-                  <div>
-                    <label class="block text-[10px] font-bold text-gray-700 mb-1">Cuotas</label>
-                    <input
-                      type="number"
-                      [(ngModel)]="scheduleForm.numeroCuotas"
-                      min="2"
-                      max="48"
-                      placeholder="# cuotas"
-                      class="w-full p-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:border-purple-500 focus:ring-purple-200"
-                    />
-                  </div>
-
-                  <div>
-                    <label class="block text-[10px] font-bold text-gray-700 mb-1">Periodicidad</label>
-                    <select
-                      [(ngModel)]="scheduleForm.periodicidad"
-                      class="w-full p-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:border-purple-500 focus:ring-purple-200"
-                    >
-                      <option value="">Seleccionar...</option>
-                      @for (p of periodicities(); track p.id) {
-                        <option [value]="p.id">{{ p.label }}</option>
-                      }
-                    </select>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2 mb-2">
-                  <div>
-                    <label class="block text-[10px] font-bold text-gray-700 mb-1">Monto por Cuota</label>
-                    <input
-                      type="number"
-                      [(ngModel)]="scheduleForm.montoCuota"
-                      min="50"
-                      step="0.01"
-                      placeholder="S/ 0.00"
-                      class="w-full p-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:border-purple-500 focus:ring-purple-200"
-                    />
-                  </div>
-
-                  <div>
-                    <label class="block text-[10px] font-bold text-gray-700 mb-1">Primera Cuota</label>
-                    <input
-                      type="date"
-                      [(ngModel)]="scheduleForm.fechaPrimeraCuota"
-                      class="w-full p-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:border-purple-500 focus:ring-purple-200"
-                    />
-                  </div>
-                </div>
-
-                <div class="flex gap-2 mb-2">
-                  <button
-                    (click)="generateSchedule()"
-                    class="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-1.5 px-3 rounded text-xs font-bold transition-all duration-300"
-                  >
-                    Generar Cronograma
-                  </button>
-                  <button
-                    (click)="toggleScheduleDetail()"
-                    class="px-3 bg-purple-100 hover:bg-purple-200 text-purple-700 py-1.5 rounded text-xs font-bold transition-all duration-300"
-                  >
-                    {{ showScheduleDetail() ? 'Ocultar' : 'Ver' }} Detalle
-                  </button>
-                </div>
-              </div>
-            }
-
             <!-- Sección de Campos Dinámicos - NUEVA -->
             @if (isLoadingDynamicFields()) {
               <div class="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 rounded-lg shadow-md p-3">
@@ -626,14 +534,114 @@ import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-conf
             <!-- Componente de Campos Dinámicos -->
             @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFieldsSchema()) {
               <app-dynamic-field-renderer
+                #dynamicFieldRendererComponent
                 [schema]="dynamicFieldsSchema()"
+                [externalUpdates]="externalFieldUpdates()"
+                [selectedClassification]="selectedClassification()"
                 (dataChange)="onDynamicFieldsChange($event)"
               />
             }
 
+            <!-- Schedule Helper - Payment Schedule Information -->
+            @if (isLoadingSchedules()) {
+              <div class="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 rounded-lg shadow-md p-3 animate-pulse">
+                <div class="flex items-center justify-center gap-2 text-purple-600 dark:text-purple-400">
+                  <lucide-angular name="clock" [size]="16" class="animate-spin"></lucide-angular>
+                  <span class="text-xs font-semibold">Cargando cronogramas pendientes...</span>
+                </div>
+              </div>
+            }
+
+            @if (!isLoadingSchedules() && showScheduleHelper() && activeSchedules().length > 0) {
+              <div class="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 border-2 border-purple-300 dark:border-purple-700 rounded-lg shadow-lg p-3 space-y-2">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div class="p-1.5 bg-purple-500 dark:bg-purple-600 rounded">
+                      <lucide-angular name="calendar" [size]="14" class="text-white"></lucide-angular>
+                    </div>
+                    <div>
+                      <h4 class="text-xs font-bold text-purple-900 dark:text-purple-100">Cronograma Activo Detectado</h4>
+                      <p class="text-[9px] text-purple-600 dark:text-purple-300">Cliente tiene {{ activeSchedules().length }} cronograma(s) pendiente(s)</p>
+                    </div>
+                  </div>
+                </div>
+
+                @for (schedule of activeSchedules(); track schedule.id) {
+                  <div class="bg-white dark:bg-gray-800 rounded-lg border border-purple-200 dark:border-purple-700 p-2 space-y-2">
+                    <!-- Schedule Summary -->
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <div class="text-xs font-bold text-purple-900 dark:text-purple-100">
+                          {{ schedule.scheduleType || 'CRONOGRAMA' }}
+                        </div>
+                        <div class="text-[9px] px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded font-semibold">
+                          ACTIVO
+                        </div>
+                      </div>
+                      <div class="text-xs font-bold text-purple-900 dark:text-purple-100">
+                        S/ {{ schedule.totalAmount | number:'1.2-2' }}
+                      </div>
+                    </div>
+
+                    <!-- Pending Installments -->
+                    <div class="space-y-1">
+                      <div class="text-[9px] font-bold text-gray-600 dark:text-gray-300 uppercase">Cuotas Pendientes</div>
+                      @for (installment of getPendingInstallments(schedule); track installment.id; let idx = $index) {
+                        @if (idx < 3) {
+                          <div class="flex items-center justify-between text-[10px] bg-gray-50 dark:bg-gray-900 p-1.5 rounded">
+                            <div class="flex items-center gap-2">
+                              <span class="font-semibold text-gray-700 dark:text-gray-300">Cuota #{{ installment.installmentNumber }}</span>
+                              <span class="text-gray-500 dark:text-gray-400">Vence: {{ installment.dueDate }}</span>
+                            </div>
+                            <span class="font-bold text-purple-700 dark:text-purple-300">S/ {{ installment.amount | number:'1.2-2' }}</span>
+                          </div>
+                        }
+                      }
+                      @if (getPendingInstallments(schedule).length > 3) {
+                        <div class="text-[9px] text-center text-gray-500 dark:text-gray-400 italic">
+                          + {{ getPendingInstallments(schedule).length - 3 }} cuotas más
+                        </div>
+                      }
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="flex gap-2 pt-1">
+                      <!-- Botón Usar Próxima Cuota - Mostrar si allowsInstallmentSelection es true -->
+                      @if (selectedClassification()?.allowsInstallmentSelection === true) {
+                        <button
+                          type="button"
+                          (click)="applyNextInstallmentPayment()"
+                          class="flex-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white text-[10px] font-bold rounded transition-colors flex items-center justify-center gap-1">
+                          <lucide-angular name="chevron-down" [size]="12"></lucide-angular>
+                          Usar Próxima Cuota
+                        </button>
+                      }
+
+                      <!-- Botón Pagar Todo - Mostrar si suggestsFullAmount es true -->
+                      @if (selectedClassification()?.suggestsFullAmount === true) {
+                        <button
+                          type="button"
+                          (click)="applyFullSchedulePayment()"
+                          class="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-[10px] font-bold rounded transition-colors flex items-center justify-center gap-1">
+                          <lucide-angular name="wallet" [size]="12"></lucide-angular>
+                          Pagar Todo (S/ {{ calculatePendingAmount(schedule) | number:'1.2-2' }})
+                        </button>
+                      }
+                    </div>
+
+                    <!-- Info Note -->
+                    <div class="text-[9px] text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/20 p-1.5 rounded flex items-start gap-1">
+                      <lucide-angular name="info" [size]="10" class="mt-0.5 flex-shrink-0"></lucide-angular>
+                      <span>El pago se aplicará automáticamente a las cuotas pendientes en orden de vencimiento</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
             <!-- Observaciones - COMPACTAS -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-2 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300">
-              <label class="block font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
+              <label class="font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
                 <lucide-angular name="message-square" [size]="12" class="text-purple-600 dark:text-purple-200"></lucide-angular>
                 Observaciones
               </label>
@@ -666,6 +674,7 @@ import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-conf
               <button
                 (click)="saveManagement()"
                 [disabled]="saving() || !isFormValid()"
+                [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
                 class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
                 @if (saving()) {
@@ -686,6 +695,46 @@ import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-conf
           </div>
         </div>
       </div>
+
+      <!-- Modal de Cronograma Detallado -->
+      @if (showScheduleDetail() && scheduleManagementId()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+          <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-slideInUp">
+            <!-- Header del modal -->
+            <div class="bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 text-white px-6 py-4 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <lucide-angular name="calendar" [size]="24"></lucide-angular>
+                <div>
+                  <h2 class="text-lg font-bold">Cronograma de Pagos</h2>
+                  <p class="text-sm opacity-90">Gestión {{ scheduleManagementId() }}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                (click)="closeScheduleDetail()"
+                class="p-2 hover:bg-white/20 rounded-lg transition-colors">
+                <lucide-angular name="x" [size]="20"></lucide-angular>
+              </button>
+            </div>
+
+            <!-- Contenido del modal -->
+            <div class="flex-1 overflow-y-auto p-6">
+              <app-payment-schedule-view [managementId]="scheduleManagementId()!" />
+            </div>
+
+            <!-- Footer del modal -->
+            <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+              <button
+                type="button"
+                (click)="closeScheduleDetail()"
+                class="px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300
+                       hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -728,23 +777,31 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected callDuration = signal(0);
   protected saving = signal(false);
   protected showScheduleDetail = signal(false);
+  protected scheduleManagementId = signal<string | null>(null);
+  protected showOutputSelector = false; // Para el dropdown de campos del cliente
   protected errors = signal<ValidationErrors>({});
   protected showSuccess = signal(false);
   protected animateEntry = signal(true);
   protected activeTab = signal('cliente');
   protected historialGestiones = signal<Array<{
+    managementId: string;
     fecha: string;
     asesor: string;
     resultado: string;
     gestion: string;
     observacion: string;
     duracion: string;
+    hasSchedule: boolean;
+    schedule: any;
   }>>([]);
 
   selectedTenantId?: number;
   selectedPortfolioId?: number;
   tenants: Tenant[] = [];
   portfolios: Portfolio[] = [];
+
+  // Configuración de outputs del cliente
+  customerOutputFields = signal<any[]>([]);
 
   campaign = computed(() => this.systemConfigService.getCampaign());
   contactClassifications = computed(() => this.systemConfigService.getContactClassifications());
@@ -825,6 +882,37 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   isLoadingDynamicFields = signal(false);
   isLeafClassification = signal(false);
   dynamicFieldsSchema = signal<MetadataSchema | null>(null);
+  externalFieldUpdates = signal<any>({}); // Para comunicar actualizaciones externas al componente hijo
+
+  // ViewChild para acceder al componente de campos dinámicos
+  @ViewChild('dynamicFieldRendererComponent') dynamicFieldRenderer?: DynamicFieldRendererComponent;
+
+  // Payment schedule signals
+  activeSchedules = signal<any[]>([]);
+  isLoadingSchedules = signal(false);
+  showScheduleHelper = signal(false);
+
+  // Computed para obtener la clasificación seleccionada actual con sus propiedades de tipo
+  selectedClassification = computed<ManagementClassification | null>(() => {
+    const selectedIds = this.selectedClassifications();
+    if (selectedIds.length === 0) return null;
+
+    const lastSelectedId = selectedIds[selectedIds.length - 1];
+    if (!lastSelectedId) return null;
+
+    const allClassifications = this.managementClassifications();
+    const found = allClassifications.find((c: any) => String(c.id) === String(lastSelectedId));
+
+    // DEBUG: Log para verificar las propiedades
+    if (found) {
+      console.log('[DEBUG] Selected classification:', found);
+      console.log('[DEBUG] suggestsFullAmount:', found.suggestsFullAmount);
+      console.log('[DEBUG] allowsInstallmentSelection:', found.allowsInstallmentSelection);
+      console.log('[DEBUG] requiresManualAmount:', found.requiresManualAmount);
+    }
+
+    return found as ManagementClassification || null;
+  });
 
   // Computed para determinar si el formulario es válido y completo para habilitar el botón guardar
   isFormValid = computed(() => {
@@ -832,13 +920,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (this.usesHierarchicalClassifications()) {
       // Sistema jerárquico: verificar que se haya llegado a una clasificación "hoja"
       const selected = this.selectedClassifications();
+
       if (selected.length === 0 || !selected[selected.length - 1]) {
-        return false; // No hay clasificación seleccionada o la última está vacía
+        return false;
       }
 
       // Verificar que sea una clasificación hoja (sin hijos)
-      if (!this.isLeafClassification()) {
-        return false; // Aún hay más niveles por seleccionar
+      const isLeaf = this.isLeafClassification();
+      if (!isLeaf) {
+        return false;
       }
     } else {
       // Sistema simple: verificar resultado de contacto
@@ -848,11 +938,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
 
     // 2. Verificar campos de pago si son requeridos
-    if (this.showPaymentSection()) {
-      if (!this.managementForm.metodoPago || !this.managementForm.montoPago) {
-        return false;
-      }
-    }
+    // NOTA: Los campos de pago ahora son campos dinámicos, validados en el paso 3
+    // Ya no se usan managementForm.metodoPago ni managementForm.montoPago
 
     // 3. Verificar campos dinámicos requeridos
     const schema = this.dynamicFieldsSchema();
@@ -869,14 +956,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           }
 
           // Tabla sin filas
-          if (field.type === 'table' && (!Array.isArray(value) || value.length === 0)) {
-            return false;
+          if (field.type === 'table') {
+            if (!Array.isArray(value) || value.length === 0) {
+              return false;
+            }
           }
         }
       }
     }
 
-    // Todo válido
     return true;
   });
 
@@ -885,11 +973,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const selected = this.selectedClassifications();
     const levels: any[][] = [];
 
-    console.log('🔍 hierarchyLevels - Total classifications:', all.length);
-    console.log('🔍 hierarchyLevels - Selected classifications:', selected);
-
     const roots = all.filter(c => c.hierarchyLevel === 1 || !c.parentId);
-    console.log('🔍 hierarchyLevels - Roots found:', roots.length, roots.map(r => `${r.codigo} (id:${r.id})`));
 
     if (roots.length > 0) {
       levels.push(roots);
@@ -897,11 +981,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     for (let i = 0; i < selected.length; i++) {
       const parentId = selected[i];
-      console.log(`🔍 hierarchyLevels - Level ${i + 1}: Looking for children of parentId=${parentId}`);
 
       if (parentId) {
         const children = all.filter(c => c.parentId && Number(c.parentId) === Number(parentId));
-        console.log(`🔍 hierarchyLevels - Found ${children.length} children:`, children.map(c => `${c.codigo} (id:${c.id})`));
 
         if (children.length > 0) {
           levels.push(children);
@@ -911,7 +993,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     }
 
-    console.log('🔍 hierarchyLevels - Total levels:', levels.length);
     return levels;
   });
 
@@ -921,7 +1002,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     periodicidad: '',
     fechaPrimeraCuota: '',
     tipoCronograma: '',
-    montoInicial: ''
+    montoInicial: '',
+    montoNegociado: '', // Para tipo Financiera
+    cuotas: [] as Array<{numero: number, monto: string, fechaVencimiento: string}>
   };
 
   customerData = signal<CustomerData>({
@@ -965,9 +1048,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   constructor(
     private systemConfigService: SystemConfigService,
     private managementService: ManagementService,
+    private paymentScheduleService: PaymentScheduleService,
     public themeService: ThemeService,
     private classificationService: ClassificationService,
-    private apiSystemConfigService: ApiSystemConfigService
+    private apiSystemConfigService: ApiSystemConfigService,
+    private customerOutputConfigService: CustomerOutputConfigService
   ) {}
 
   ngOnInit() {
@@ -985,7 +1070,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        console.error('❌ Error loading tenants:', error);
+        console.error('Error loading tenants:', error);
       }
     });
   }
@@ -997,6 +1082,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (this.selectedTenantId) {
       this.loadPortfolios();
       this.reloadClassifications();
+      this.loadCustomerOutputConfig();
     }
   }
 
@@ -1008,13 +1094,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.portfolios = data;
       },
       error: (error) => {
-        console.error('❌ Error loading portfolios:', error);
+        console.error('Error loading portfolios:', error);
       }
     });
   }
 
   onPortfolioChange() {
     this.reloadClassifications();
+    this.loadCustomerOutputConfig();
   }
 
   reloadClassifications() {
@@ -1026,34 +1113,123 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     );
   }
 
-  private loadManagementHistory() {
+  /**
+   * Carga la configuración de outputs del cliente desde el backend
+   *
+   * LÓGICA:
+   * 1. Llama a GET /api/v1/customer-outputs/config?tenantId=X&portfolioId=Y
+   * 2. Backend SIEMPRE retorna 200 OK (nunca 404)
+   * 3. Si id === null → No hay configuración guardada → Usar campos por defecto
+   * 4. Si id !== null → Hay configuración guardada → Usar esos campos (incluso si fieldsConfig="[]")
+   *
+   * DIFERENCIA IMPORTANTE:
+   * - id=null, fieldsConfig="[]": No existe config en BD → Mostrar campos DEFAULT
+   * - id=123, fieldsConfig="[]": Existe config vacía → Admin configuró NO mostrar nada
+   */
+  loadCustomerOutputConfig() {
+    if (!this.selectedTenantId) return;
+
+    this.customerOutputConfigService.getConfiguration(this.selectedTenantId, this.selectedPortfolioId)
+      .pipe(
+        catchError((error) => {
+          console.error('Error cargando configuración:', error);
+          this.setDefaultOutputFields();
+          return of(null);
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          if (!response) return; // Si hubo error, ya se manejó en catchError
+
+          // Verificar si existe configuración en BD
+          if (response.id === null) {
+            // No hay configuración guardada → usar campos por defecto
+            this.setDefaultOutputFields();
+            return;
+          }
+
+          // Hay configuración guardada → usar esos campos (incluso si está vacío)
+          try {
+            const fields = JSON.parse(response.fieldsConfig);
+            // Filtrar solo campos visibles y ordenar
+            const visibleFields = fields
+              .filter((f: any) => f.isVisible)
+              .sort((a: any, b: any) => a.displayOrder - b.displayOrder);
+
+            this.customerOutputFields.set(visibleFields);
+          } catch (error) {
+            console.error('Error parseando fieldsConfig:', error);
+            this.setDefaultOutputFields();
+          }
+        }
+      });
+  }
+
+  /**
+   * Establece campos por defecto cuando no hay configuración guardada
+   */
+  private setDefaultOutputFields() {
+    this.customerOutputFields.set([
+      { id: 'documentCode', label: 'DNI/Documento', field: 'documentCode', category: 'personal', format: 'text', highlight: true, size: 'medium' },
+      { id: 'fullName', label: 'Nombre Completo', field: 'fullName', category: 'personal', format: 'text', highlight: false, size: 'medium' },
+      { id: 'mobilePhone', label: 'Celular', field: 'contactInfo.mobilePhone', category: 'contact', format: 'text', highlight: false, size: 'medium' },
+      { id: 'currentDebt', label: 'Deuda Actual', field: 'debtInfo.currentDebt', category: 'debt', format: 'currency', highlight: true, size: 'small' },
+      { id: 'daysOverdue', label: 'Días de Mora', field: 'debtInfo.daysOverdue', category: 'debt', format: 'number', highlight: true, size: 'small' },
+      { id: 'accountNumber', label: 'Nro. Cuenta', field: 'accountInfo.accountNumber', category: 'account', format: 'text', highlight: false, size: 'medium' }
+    ]);
+  }
+
+  loadManagementHistory() {
     const customerId = this.customerData().id_cliente;
+    console.log('[HISTORIAL] Cargando historial para cliente:', customerId);
 
     this.managementService.getManagementsByCustomer(customerId).subscribe({
       next: (managements) => {
-        console.log('✅ Historial de gestiones cargado:', managements);
-        if (managements.length > 0) {
-          console.log('📋 Primer management:', managements[0]);
-          console.log('📋 Clasificación:', managements[0].classificationDescription);
-          console.log('📋 Tipificación:', managements[0].typificationDescription);
-        }
+        console.log('[HISTORIAL] Gestiones recibidas del backend:', managements);
+        console.log('[HISTORIAL] Total de gestiones:', managements.length);
 
+        // Mapear gestiones y cargar cronogramas
         const historial = managements.map(m => {
-          console.log(`Mapeando gestión: clasificación=${m.classificationCode}, tipificación=${m.typificationCode}`);
-          return {
+          const historyItem = {
+            managementId: m.managementId,
             fecha: this.formatDateTime(m.managementDate),
             asesor: m.advisorId,
             resultado: m.classificationDescription || m.classificationCode || '-',
             gestion: m.typificationDescription || m.typificationCode || '-',
             observacion: m.observations || 'Sin observaciones',
-            duracion: m.callDetail ? this.calculateCallDuration(m.callDetail) : '00:00:00'
+            duracion: m.callDetail ? this.calculateCallDuration(m.callDetail) : '00:00:00',
+            hasSchedule: m.typificationRequiresSchedule || false,
+            schedule: null as any
           };
+
+          // Cargar cronograma si existe
+          if (historyItem.hasSchedule) {
+            this.paymentScheduleService.getPaymentScheduleByManagementId(m.managementId).subscribe({
+              next: (schedule) => {
+                if (schedule) {
+                  historyItem.schedule = schedule;
+                }
+              },
+              error: () => {
+                // Silenciar error si no hay cronograma
+              }
+            });
+          }
+
+          return historyItem;
         });
 
         this.historialGestiones.set(historial);
+        console.log('[HISTORIAL] Historial establecido en signal:', this.historialGestiones());
       },
       error: (error) => {
-        console.error('❌ Error al cargar historial de gestiones:', error);
+        console.error('[HISTORIAL] Error al cargar historial de gestiones:', error);
+        console.error('[HISTORIAL] Detalles del error:', {
+          status: error.status,
+          statusText: error.statusText,
+          message: error.message,
+          url: error.url
+        });
       }
     });
   }
@@ -1079,6 +1255,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (this.callTimer) {
       clearInterval(this.callTimer);
     }
+  }
+
+  protected openScheduleDetail(managementId: string) {
+    this.scheduleManagementId.set(managementId);
+    this.showScheduleDetail.set(true);
+  }
+
+  protected closeScheduleDetail() {
+    this.showScheduleDetail.set(false);
+    this.scheduleManagementId.set(null);
   }
 
   toggleCall() {
@@ -1140,14 +1326,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   onClassificationLevelChange(levelIndex: number, value: string) {
-    console.log(`🔄 Level ${levelIndex + 1} changed to:`, value);
-
     const newSelections = [...this.selectedClassifications()];
     newSelections[levelIndex] = value;
 
     this.selectedClassifications.set(newSelections.slice(0, levelIndex + 1));
-
-    console.log(`✅ Updated selectedClassifications:`, this.selectedClassifications());
 
     if (levelIndex === 0) {
       this.managementForm.clasificacionNivel1 = value;
@@ -1173,19 +1355,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   private loadDynamicFields(classificationId: number) {
-    console.log(`📋 Cargando campos dinámicos para clasificación ${classificationId}`);
-
     this.isLoadingDynamicFields.set(true);
     this.apiSystemConfigService.getClassificationFields(classificationId).subscribe({
       next: (response) => {
-        console.log(`✅ Respuesta de campos dinámicos:`, response);
-
         this.isLeafClassification.set(response.isLeaf);
         this.dynamicFields.set(response.fields || []);
 
         // Convertir campos del backend al formato MetadataSchema
         // Los tipos ya vienen en lowercase desde el backend, no necesitan conversión
-        const fieldConfigs: FieldConfig[] = (response.fields || []).map((field: any) => ({
+        const fieldConfigs: FieldConfig[] = (response.fields || []).map((field: any, index: number) => {
+          return {
           id: field.fieldCode,
           label: field.fieldName,
           type: field.fieldType.toLowerCase(), // Asegurar lowercase por compatibilidad
@@ -1193,18 +1372,39 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           placeholder: field.description || '',
           helpText: field.description,
           displayOrder: field.displayOrder || 0,
+          // Para campos select, mapear options
+          options: field.options ? field.options.map((opt: any) => {
+            if (typeof opt === 'string') {
+              return { value: opt, label: opt };
+            }
+            return { value: opt.value || opt, label: opt.label || opt };
+          }) : undefined,
+          min: field.validationRules?.min,
+          max: field.validationRules?.max,
+          minLength: field.validationRules?.minLength,
+          maxLength: field.validationRules?.maxLength,
           // Para campos tipo tabla, incluir columnas
           columns: field.fieldType.toLowerCase() === 'table' && field.columns ? field.columns.map((col: any) => ({
             id: col.id || col.fieldCode,
             label: col.label || col.fieldName,
             type: (col.type || col.fieldType).toLowerCase(), // Asegurar lowercase
-            required: col.required || col.isRequired || false
+            required: col.required || col.isRequired || false,
+            // Para columnas tipo select, mapear options
+            options: col.options ? col.options.map((opt: any) => {
+              if (typeof opt === 'string') {
+                return { value: opt, label: opt };
+              }
+              return { value: opt.value || opt, label: opt.label || opt };
+            }) : undefined
           })) : undefined,
           allowAddRow: field.fieldType.toLowerCase() === 'table',
           allowDeleteRow: field.fieldType.toLowerCase() === 'table',
           minRows: field.minRows || 0,
-          maxRows: field.maxRows
-        }));
+          maxRows: field.maxRows,
+          // For table fields, copy linkedToField property if present
+          ...(field.linkedToField && { linkedToField: field.linkedToField })
+          };
+        });
 
         const schema: MetadataSchema = {
           fields: fieldConfigs
@@ -1213,10 +1413,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.dynamicFieldsSchema.set(schema);
         this.isLoadingDynamicFields.set(false);
 
-        console.log(`📝 Schema convertido con ${fieldConfigs.length} campos`);
+        // Check if this is a payment typification and load schedules
+        this.checkAndLoadPaymentSchedules();
       },
       error: (error) => {
-        console.error(`❌ Error cargando campos dinámicos:`, error);
+        console.error('Error cargando campos dinámicos:', error);
         this.isLoadingDynamicFields.set(false);
         this.isLeafClassification.set(false);
         this.dynamicFields.set([]);
@@ -1226,11 +1427,294 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   /**
+   * Checks if the current selected typification requires payment
+   * and loads active schedules if needed
+   */
+  private checkAndLoadPaymentSchedules() {
+    // Get the currently selected classification
+    const selected = this.selectedClassifications();
+    if (selected.length === 0) {
+      this.showScheduleHelper.set(false);
+      return;
+    }
+
+    const lastSelectedId = selected[selected.length - 1];
+    const allClassifications = this.managementClassifications();
+    const currentClass = allClassifications.find((c: any) => c.id.toString() === lastSelectedId);
+
+    // Check if this typification requires payment (codes: PC, PT, PP, PPT)
+    if (currentClass && currentClass.requiere_pago) {
+      console.log('[SCHEDULE] Payment typification detected:', currentClass.codigo);
+      console.log('[DEBUG-SCHEDULE] Full classification object:', currentClass);
+      console.log('[DEBUG-SCHEDULE] suggestsFullAmount:', currentClass.suggestsFullAmount);
+      console.log('[DEBUG-SCHEDULE] allowsInstallmentSelection:', currentClass.allowsInstallmentSelection);
+      console.log('[DEBUG-SCHEDULE] requiresManualAmount:', currentClass.requiresManualAmount);
+      this.loadActiveSchedules();
+    } else {
+      this.showScheduleHelper.set(false);
+      this.activeSchedules.set([]);
+    }
+  }
+
+  /**
+   * Loads active payment schedules for the current customer
+   */
+  private loadActiveSchedules() {
+    const customerId = this.customerData().id_cliente;
+    console.log('[SCHEDULE] Loading active schedules for customer:', customerId);
+
+    this.isLoadingSchedules.set(true);
+    this.managementService.getActiveSchedulesByCustomer(customerId).subscribe({
+      next: (schedules) => {
+        console.log('[SCHEDULE] Active schedules loaded:', schedules);
+        this.activeSchedules.set(schedules);
+        this.showScheduleHelper.set(schedules.length > 0);
+        this.isLoadingSchedules.set(false);
+
+        // Auto-suggest payment amount from next pending installment
+        if (schedules.length > 0) {
+          this.suggestPaymentAmount(schedules[0]);
+        }
+      },
+      error: (error) => {
+        console.error('[SCHEDULE] Error loading schedules:', error);
+        this.isLoadingSchedules.set(false);
+        this.showScheduleHelper.set(false);
+      }
+    });
+  }
+
+  /**
+   * Suggests payment amount based on next pending installment
+   */
+  private suggestPaymentAmount(schedule: any) {
+    if (!schedule.installments || schedule.installments.length === 0) return;
+
+    // Find first pending installment
+    const pendingInstallment = schedule.installments
+      .filter((inst: any) => inst.status.status === 'PENDING') // Corregido: el backend usa 'PENDING' en inglés
+      .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
+
+    if (pendingInstallment) {
+      console.log('[SCHEDULE] Suggested payment amount:', pendingInstallment.amount);
+
+      // Pre-fill the payment amount in managementForm if not already set
+      if (!this.managementForm.montoPago) {
+        this.managementForm.montoPago = pendingInstallment.amount.toFixed(2);
+      }
+
+      // Also pre-fill the dynamic fields for compatibility
+      const currentValues = { ...this.dynamicFieldValues() };
+      if (!currentValues['monto_pagado']) {
+        currentValues['monto_pagado'] = pendingInstallment.amount;
+        this.dynamicFieldValues.set(currentValues);
+      }
+    }
+  }
+
+  /**
+   * Applies full payment from schedule
+   */
+  // Force recompile
+  applyFullSchedulePayment() {
+    const schedules = this.activeSchedules();
+    if (schedules.length === 0) return;
+
+    const schedule = schedules[0];
+    const pendingAmount = this.calculatePendingAmount(schedule);
+
+    console.log('[BUTTON] Pagar Todo clicked. Amount:', pendingAmount);
+
+    // Buscar el campo de monto en el schema
+    const schema = this.dynamicFieldsSchema();
+    const montoField = schema?.fields.find(f =>
+      f.type === 'currency' || f.id.toLowerCase().includes('monto')
+    );
+
+    if (montoField) {
+      console.log('[BUTTON] Found monto field:', montoField.id);
+
+      // Actualizar el signal de actualizaciones externas
+      const updates: any = {};
+      updates[montoField.id] = pendingAmount;
+
+      // Si hay campo saldo_pendiente, calcularlo (será 0 porque se paga todo)
+      const hasSaldoField = schema?.fields.some(f => f.id === 'saldo_pendiente');
+      if (hasSaldoField) {
+        updates.saldo_pendiente = 0; // Al pagar todo, el saldo pendiente es 0
+        console.log('[BUTTON] Saldo pendiente será 0 (pago total)');
+
+        // Actualizar también dynamicFieldValues para que la validación pase
+        const currentValues = { ...this.dynamicFieldValues() };
+        currentValues[montoField.id] = pendingAmount;
+        currentValues.saldo_pendiente = 0;
+        this.dynamicFieldValues.set(currentValues);
+      }
+
+      this.externalFieldUpdates.set(updates);
+      console.log('[BUTTON] Updated externalFieldUpdates:', updates);
+
+      // Limpiar después de un breve delay para permitir futuras actualizaciones
+      setTimeout(() => this.externalFieldUpdates.set({}), 100);
+    } else {
+      console.warn('[BUTTON] No se encontró campo de monto en el schema');
+    }
+  }
+
+  /**
+   * Applies next installment payment
+   */
+  applyNextInstallmentPayment() {
+    console.log('[BUTTON-PP] Usar Próxima Cuota clicked!');
+    const schedules = this.activeSchedules();
+    console.log('[BUTTON-PP] Active schedules:', schedules);
+
+    if (schedules.length === 0) {
+      console.warn('[BUTTON-PP] No schedules found');
+      return;
+    }
+
+    const schedule = schedules[0];
+    console.log('[BUTTON-PP] Using schedule:', schedule);
+    console.log('[BUTTON-PP] Schedule installments:', schedule.installments);
+
+    const pendingInstallments = schedule.installments
+      .filter((inst: any) => {
+        console.log('[BUTTON-PP] Checking installment:', inst, 'Status:', inst.status?.status);
+        return inst.status.status === 'PENDING'; // Corregido: el backend usa 'PENDING' en inglés
+      });
+
+    console.log('[BUTTON-PP] Pending installments:', pendingInstallments);
+
+    const pendingInstallment = pendingInstallments
+      .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
+
+    console.log('[BUTTON-PP] Next pending installment:', pendingInstallment);
+
+    if (pendingInstallment) {
+      console.log('[BUTTON-PP] Usar Próxima Cuota - Amount:', pendingInstallment.amount);
+
+      // Buscar el campo de monto en el schema
+      const schema = this.dynamicFieldsSchema();
+      const montoField = schema?.fields.find(f =>
+        f.type === 'currency' || f.id.toLowerCase().includes('monto')
+      );
+
+      if (montoField) {
+        console.log('[BUTTON-PP] Found monto field:', montoField.id);
+
+        // Actualizar el signal de actualizaciones externas
+        const updates: any = {};
+        updates[montoField.id] = pendingInstallment.amount;
+
+        // Si hay campo saldo_pendiente, calcularlo
+        const hasSaldoField = schema?.fields.some(f => f.id === 'saldo_pendiente');
+        if (hasSaldoField) {
+          const totalPendiente = this.calculatePendingAmount(schedule);
+          const saldoPendiente = Math.max(0, totalPendiente - pendingInstallment.amount);
+          updates.saldo_pendiente = saldoPendiente;
+          console.log('[BUTTON-PP] Saldo pendiente calculado:', saldoPendiente, '= Total', totalPendiente, '- Monto', pendingInstallment.amount);
+
+          // Actualizar también dynamicFieldValues para que la validación pase
+          const currentValues = { ...this.dynamicFieldValues() };
+          currentValues[montoField.id] = pendingInstallment.amount;
+          currentValues.saldo_pendiente = saldoPendiente;
+          this.dynamicFieldValues.set(currentValues);
+        }
+
+        this.externalFieldUpdates.set(updates);
+        console.log('[BUTTON-PP] Updated externalFieldUpdates:', updates);
+
+        // Limpiar después de un breve delay para permitir futuras actualizaciones
+        setTimeout(() => this.externalFieldUpdates.set({}), 100);
+      } else {
+        console.warn('[BUTTON-PP] No se encontró campo de monto en el schema');
+      }
+    } else {
+      console.warn('[BUTTON-PP] No pending installment found');
+    }
+  }
+
+  /**
+   * Calculates total pending amount from schedule
+   */
+  calculatePendingAmount(schedule: any): number {
+    console.log('[CALC] Schedule:', schedule);
+    console.log('[CALC] Installments:', schedule.installments);
+    const pendingInstallments = schedule.installments
+      .filter((inst: any) => {
+        console.log('[CALC] Installment status:', inst.status, 'Status value:', inst.status?.status);
+        return inst.status.status === 'PENDING'; // Corregido: el backend usa 'PENDING' en inglés
+      });
+    console.log('[CALC] Pending installments:', pendingInstallments);
+    const total = pendingInstallments.reduce((sum: number, inst: any) => sum + inst.amount, 0);
+    console.log('[CALC] Total pending amount:', total);
+    return total;
+  }
+
+  /**
+   * Gets pending installments from schedule
+   */
+  protected getPendingInstallments(schedule: any): any[] {
+    if (!schedule.installments) return [];
+    return schedule.installments
+      .filter((inst: any) => inst.status.status === 'PENDING') // Corregido: el backend usa 'PENDING' en inglés
+      .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  }
+
+  /**
    * Maneja cambios en los campos dinámicos del componente
+   * Calcula saldo_pendiente en tiempo real para mostrar a la asesora
+   * También se calcula en backend al guardar para histórico
    */
   onDynamicFieldsChange(data: any) {
     this.dynamicFieldValues.set(data);
-    console.log('📝 Valores de campos dinámicos actualizados:', data);
+
+    // Calcular saldo pendiente en tiempo real cuando cambia monto_pagado
+    if (data.monto_pagado !== undefined && data.monto_pagado !== null) {
+      this.calculateAndUpdatePendingBalance(data.monto_pagado);
+    }
+  }
+
+  /**
+   * Calcula y actualiza el saldo pendiente en tiempo real
+   * para que la asesora pueda informar al cliente
+   * Fórmula: Saldo Pendiente = (Suma de cuotas pendientes) - (Monto Pagado)
+   */
+  private calculateAndUpdatePendingBalance(montoPagado: number) {
+    const schedules = this.activeSchedules();
+
+    if (schedules.length === 0) {
+      console.log('[SALDO] No hay cronogramas activos');
+      return;
+    }
+
+    const schedule = schedules[0];
+    const totalPendiente = this.calculatePendingAmount(schedule);
+    const saldoPendiente = Math.max(0, totalPendiente - (montoPagado || 0));
+
+    console.log('[SALDO] Total pendiente:', totalPendiente);
+    console.log('[SALDO] Monto pagado:', montoPagado);
+    console.log('[SALDO] Saldo pendiente calculado:', saldoPendiente);
+
+    // Actualizar el campo saldo_pendiente para que la asesora lo vea
+    const schema = this.dynamicFieldsSchema();
+    const hasSaldoField = schema?.fields.some(f => f.id === 'saldo_pendiente');
+
+    if (hasSaldoField) {
+      console.log('[SALDO] Actualizando campo saldo_pendiente con:', saldoPendiente);
+
+      // Actualizar tanto en el componente hijo (para mostrar) como en dynamicFieldValues (para validación)
+      const updates: any = { saldo_pendiente: saldoPendiente };
+      this.externalFieldUpdates.set(updates);
+
+      // También actualizar directamente dynamicFieldValues para que la validación pase
+      const currentValues = { ...this.dynamicFieldValues() };
+      currentValues.saldo_pendiente = saldoPendiente;
+      this.dynamicFieldValues.set(currentValues);
+
+      setTimeout(() => this.externalFieldUpdates.set({}), 100);
+    }
   }
 
   getDynamicLevelLabel(levelIndex: number): string {
@@ -1249,7 +1733,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     if (!parentId) return `Nivel ${levelIndex + 1}`;
 
-    const parent = this.managementClassifications().find(c => c.id === Number(parentId));
+    const parent = this.managementClassifications().find(c => c.id == parentId);
     if (!parent) return `Nivel ${levelIndex + 1}`;
 
     if (levelIndex === 1) {
@@ -1289,8 +1773,106 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     return selectedManagement?.requiere_cronograma || false;
   }
 
+  onInstallmentCountChange() {
+    const numInstallments = parseInt(this.scheduleForm.numeroCuotas);
+
+    if (isNaN(numInstallments) || numInstallments < 1) {
+      // If invalid number, clear installments
+      this.scheduleForm.cuotas = [];
+      return;
+    }
+
+    const currentLength = this.scheduleForm.cuotas.length;
+
+    if (numInstallments > currentLength) {
+      // Add missing installments
+      for (let i = currentLength + 1; i <= numInstallments; i++) {
+        this.scheduleForm.cuotas.push({
+          numero: i,
+          monto: '',
+          fechaVencimiento: ''
+        });
+      }
+    } else if (numInstallments < currentLength) {
+      // Remove extra installments
+      this.scheduleForm.cuotas = this.scheduleForm.cuotas.slice(0, numInstallments);
+      // Renumber
+      this.scheduleForm.cuotas.forEach((cuota, idx) => {
+        cuota.numero = idx + 1;
+      });
+    }
+  }
+
   generateSchedule() {
-    console.log('Generando cronograma...', this.scheduleForm);
+    const numCuotas = parseInt(this.scheduleForm.numeroCuotas);
+    if (isNaN(numCuotas) || numCuotas < 1) {
+      alert('Por favor ingrese un número válido de cuotas');
+      return;
+    }
+
+    // Generar array de cuotas vacías
+    this.scheduleForm.cuotas = [];
+    for (let i = 1; i <= numCuotas; i++) {
+      this.scheduleForm.cuotas.push({
+        numero: i,
+        monto: '',
+        fechaVencimiento: ''
+      });
+    }
+  }
+
+  addInstallmentRow() {
+    const nextNumber = this.scheduleForm.cuotas.length + 1;
+    this.scheduleForm.cuotas.push({
+      numero: nextNumber,
+      monto: '',
+      fechaVencimiento: ''
+    });
+    // Actualizar el número de cuotas
+    this.scheduleForm.numeroCuotas = nextNumber.toString();
+  }
+
+  removeInstallmentRow(index: number) {
+    if (this.scheduleForm.cuotas.length > 1) {
+      this.scheduleForm.cuotas.splice(index, 1);
+      // Renumerar las cuotas
+      this.scheduleForm.cuotas.forEach((cuota, idx) => {
+        cuota.numero = idx + 1;
+      });
+      // Actualizar el número de cuotas
+      this.scheduleForm.numeroCuotas = this.scheduleForm.cuotas.length.toString();
+    }
+  }
+
+  getTodayDate(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  loadMontoNegociadoFromOutput(fieldId: string) {
+    // Buscar el campo en customerOutputFields
+    const field = this.customerOutputFields().find((f: any) => f.id === fieldId);
+    if (!field) return;
+
+    // Obtener el valor del campo usando la ruta del field
+    const fieldPath = field.field.split('.');
+    let value: any = this.customerData();
+
+    for (const key of fieldPath) {
+      if (value && typeof value === 'object') {
+        value = value[key];
+      } else {
+        value = null;
+        break;
+      }
+    }
+
+    if (value) {
+      this.scheduleForm.montoNegociado = value.toString();
+    }
   }
 
   toggleScheduleDetail() {
@@ -1315,7 +1897,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // TIPIFICACIÓN: La hoja/leaf (última selección)
       const lastSelectedId = selected[selected.length - 1];
       managementClassification = allClassifications.find((c: any) => c.id.toString() === lastSelectedId);
-      console.log('🏷️  Tipificación (hoja/leaf):', managementClassification);
 
       // CLASIFICACIÓN: La categoría padre de la tipificación
       // Si la tipificación tiene parent_id, buscar ese parent como clasificación
@@ -1323,11 +1904,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       if (managementClassification?.parentId) {
         const parentId = managementClassification.parentId;
         contactClassification = allClassifications.find((c: any) => c.id.toString() === parentId.toString());
-        console.log('📁 Clasificación (categoría):', contactClassification);
       } else {
         // Si no tiene padre, usar la misma como clasificación
         contactClassification = managementClassification;
-        console.log('📁 Clasificación (sin padre, usar misma):', contactClassification);
       }
     } else {
       // Sistema simple
@@ -1354,25 +1933,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       dynamicFields: this.dynamicFieldValues() // Incluir campos dinámicos
     };
 
-    console.log('📤 Enviando request con campos dinámicos:', request);
-
     this.managementService.createManagement(request).subscribe({
       next: (response) => {
-        console.log('✅ Gestión creada exitosamente:', response);
         this.managementId = response.managementId;
 
         if (this.callStartTime && this.callActive()) {
           this.registerCallToBackend(response.managementId);
         }
 
-        if (this.showPaymentSection() && this.managementForm.montoPago) {
-          this.registerPaymentToBackend(response.managementId);
-        }
+        // NOTA: Los pagos ahora se registran automáticamente en el backend desde dynamicFields
+        // El backend detecta clasificaciones con requiresPayment=true y procesa los campos
+        // monto_pagado, metodo_pago, numero_operacion, fecha_pago, etc.
+        // Ya no es necesario llamar a registerPaymentToBackend() aquí
+
+        // El cronograma se crea automáticamente en el backend desde dynamicFields
+        // No es necesario llamar a createScheduleToBackend() aquí
 
         this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
       },
       error: (error) => {
-        console.error('❌ Error al guardar gestión:', error);
+        console.error('Error al guardar gestión:', error);
         this.saving.set(false);
         alert('⚠️ Error al guardar la gestión. Por favor intente nuevamente.');
       }
@@ -1389,20 +1969,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     this.managementService.startCall(managementId, startCallRequest).subscribe({
       next: (response) => {
-        console.log('✅ Llamada registrada:', response);
-
         if (!this.callActive()) {
           const endCallRequest: EndCallRequest = {
             endTime: new Date().toISOString()
           };
           this.managementService.endCall(managementId, endCallRequest).subscribe({
-            next: () => console.log('✅ Llamada finalizada'),
-            error: (err) => console.error('❌ Error al finalizar llamada:', err)
+            next: () => {},
+            error: (err) => console.error('Error al finalizar llamada:', err)
           });
         }
       },
       error: (error) => {
-        console.error('❌ Error al registrar llamada:', error);
+        console.error('Error al registrar llamada:', error);
       }
     });
   }
@@ -1420,11 +1998,43 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     };
 
     this.managementService.registerPayment(managementId, paymentRequest).subscribe({
-      next: (response) => {
-        console.log('✅ Pago registrado:', response);
-      },
+      next: (response) => {},
       error: (error) => {
-        console.error('❌ Error al registrar pago:', error);
+        console.error('Error al registrar pago:', error);
+      }
+    });
+  }
+
+  private createScheduleToBackend(managementId: string) {
+    if (this.scheduleForm.cuotas.length === 0) return;
+
+    // Validar que todas las cuotas tengan monto y fecha
+    const hasInvalidInstallments = this.scheduleForm.cuotas.some(
+      cuota => !cuota.monto || !cuota.fechaVencimiento
+    );
+
+    if (hasInvalidInstallments) {
+      alert('⚠️ Por favor complete todos los montos y fechas de las cuotas');
+      return;
+    }
+
+    const scheduleRequest: any = {
+      customerId: this.customerData().id_cliente,
+      managementId: managementId,
+      scheduleType: this.scheduleForm.tipoCronograma,
+      negotiatedAmount: this.scheduleForm.montoNegociado ? parseFloat(this.scheduleForm.montoNegociado) : null,
+      installments: this.scheduleForm.cuotas.map(cuota => ({
+        installmentNumber: cuota.numero,
+        amount: parseFloat(cuota.monto),
+        dueDate: cuota.fechaVencimiento
+      }))
+    };
+
+    this.paymentScheduleService.createPaymentSchedule(scheduleRequest).subscribe({
+      next: (response) => {},
+      error: (error) => {
+        console.error('Error al crear cronograma:', error);
+        alert('⚠️ Error al crear el cronograma de pagos');
       }
     });
   }
@@ -1484,14 +2094,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
 
     // 2. Validar campos de pago si son requeridos
-    if (this.showPaymentSection()) {
-      if (!this.managementForm.metodoPago) {
-        newErrors['metodoPago'] = 'Requerido';
-      }
-      if (!this.managementForm.montoPago) {
-        newErrors['montoPago'] = 'Requerido';
-      }
-    }
+    // NOTA: Los campos de pago ahora son campos dinámicos (monto_pagado, metodo_pago, etc.)
+    // Se validan automáticamente en el paso 3 como parte de los campos dinámicos requeridos
 
     // 3. Validar campos dinámicos requeridos
     const schema = this.dynamicFieldsSchema();
@@ -1518,7 +2122,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.errors.set(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
-      console.warn('⚠️ Errores de validación:', newErrors);
       alert('Por favor complete todos los campos requeridos');
       return false;
     }
@@ -1534,8 +2137,45 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   toggleDarkMode() {
-    console.log('🎨 Toggle dark mode clicked!');
     this.themeService.toggleTheme();
+  }
+
+  /**
+   * Obtiene el valor de un campo del cliente usando notación de punto
+   * Ejemplo: 'contactInfo.mobilePhone' → customerData.contactInfo.mobilePhone
+   */
+  getFieldValue(field: string): any {
+    const customer = this.customerData();
+    if (!customer) return null;
+
+    return field.split('.').reduce((obj: any, key: string) => obj?.[key], customer);
+  }
+
+  /**
+   * Formatea un valor según su tipo
+   */
+  formatFieldValue(value: any, format?: string): string {
+    if (value === null || value === undefined || value === '') {
+      return '-';
+    }
+
+    switch (format) {
+      case 'currency':
+        return 'S/ ' + Number(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+      case 'number':
+        return String(value);
+
+      case 'date':
+        if (typeof value === 'string') {
+          const date = new Date(value);
+          return date.toLocaleDateString('es-PE');
+        }
+        return String(value);
+
+      default:
+        return String(value);
+    }
   }
 
   getContactClassificationLabel(id: string): string {
@@ -1564,7 +2204,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   addTableRow(fieldCode: string, columns: any[]) {
     if (!Array.isArray(columns)) {
-      console.error('❌ addTableRow: columns no es un array válido', columns);
+      console.error('addTableRow: columns no es un array válido', columns);
       return;
     }
 

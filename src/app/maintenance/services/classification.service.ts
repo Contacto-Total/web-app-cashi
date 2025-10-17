@@ -59,10 +59,13 @@ export class ClassificationService {
   }
 
   // Tenant Configuration Management
-  getTenantClassifications(tenantId: number, portfolioId?: number): Observable<TenantClassificationConfig[]> {
+  getTenantClassifications(tenantId: number, portfolioId?: number, includeDisabled?: boolean): Observable<TenantClassificationConfig[]> {
     let params = new HttpParams();
     if (portfolioId) {
       params = params.set('portfolioId', portfolioId.toString());
+    }
+    if (includeDisabled) {
+      params = params.set('includeDisabled', 'true');
     }
     return this.http.get<TenantClassificationConfig[]>(
       `${this.baseUrl}/tenants/${tenantId}/classifications`,

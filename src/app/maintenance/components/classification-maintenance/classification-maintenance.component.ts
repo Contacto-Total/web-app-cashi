@@ -97,7 +97,7 @@ export class ClassificationMaintenanceComponent implements OnInit {
 
     this.loading.set(true);
 
-    // Load ONLY tenant-specific configurations, not the global catalog
+    // Load ALL tenant configurations (including disabled) for maintenance view
     const request$ = this.selectedType
       ? this.classificationService.getTenantClassificationsByType(
           this.selectedTenantId,
@@ -106,7 +106,8 @@ export class ClassificationMaintenanceComponent implements OnInit {
         )
       : this.classificationService.getTenantClassifications(
           this.selectedTenantId,
-          this.selectedPortfolioId
+          this.selectedPortfolioId,
+          true // includeDisabled = true for maintenance view
         );
 
     request$.subscribe({
@@ -229,7 +230,7 @@ export class ClassificationMaintenanceComponent implements OnInit {
   }
 
   onPortfolioChange() {
-    this.loadTenantConfigs();
+    this.loadClassifications();
   }
 
   toggleClassification(node: ClassificationTreeNode, event: Event) {
@@ -253,7 +254,7 @@ export class ClassificationMaintenanceComponent implements OnInit {
     action$.subscribe({
       next: () => {
         this.showSuccessMessage();
-        this.loadTenantConfigs();
+        this.loadClassifications();
       },
       error: (error) => {
         console.error('Error toggling classification:', error);
@@ -351,6 +352,7 @@ export class ClassificationMaintenanceComponent implements OnInit {
       [ClassificationType.MANAGEMENT_TYPE]: 'Tipo de Gestión',
       [ClassificationType.PAYMENT_TYPE]: 'Tipo de Pago',
       [ClassificationType.COMPLAINT_TYPE]: 'Tipo de Reclamo',
+      [ClassificationType.PAYMENT_SCHEDULE]: 'Cronograma de Pagos',
       [ClassificationType.CUSTOM]: 'Personalizado'
     };
     return labels[type];

@@ -158,6 +158,7 @@
   <!-- Category Dialog -->
   @if (showCategoryDialog()) {
     <app-category-form-dialog
+      [classifications]="classifications"
       (save)="onCategorySaved($event)"
       (cancel)="closeCategoryDialog()">
     </app-category-form-dialog>
@@ -287,10 +288,11 @@
       <div class="flex items-center gap-1.5 ml-2 flex-shrink-0">
         <!-- Enable/Disable Toggle -->
         <label class="relative inline-flex items-center cursor-pointer"
-               (click)="$event.stopPropagation()">
+               (click)="$event.stopPropagation()"
+               [title]="node.config?.isEnabled ? 'Desactivar visualización' : 'Activar visualización'">
           <input
             type="checkbox"
-            [checked]="node.config?.isEnabled || false"
+            [checked]="node.config?.isEnabled === true"
             (change)="toggleClassification(node, $event); $event.stopPropagation()"
             class="sr-only peer">
           <div class="w-8 h-4 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-green-500"></div>

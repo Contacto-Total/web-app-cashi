@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { SystemConfig } from '../models/system-config.model';
+import { SystemConfig, ManagementClassification } from '../models/system-config.model';
 import { ApiSystemConfigService } from './api-system-config.service';
 
 @Injectable({
@@ -158,7 +158,6 @@ export class SystemConfigService {
   getContactClassifications() {
     // Primero intentar usar clasificaciones habilitadas del tenant
     const tenantData = this.apiService.tenantClassifications();
-    console.log('🔍 DEBUG: tenantData.length =', tenantData.length);
 
     if (tenantData.length > 0) {
       const contactClassifications = tenantData
@@ -169,7 +168,6 @@ export class SystemConfigService {
           label: c.customName || c.classification.name
         }));
 
-      console.log('✅ Contact classifications from tenant config:', contactClassifications.length);
       if (contactClassifications.length > 0) {
         return contactClassifications;
       }
@@ -177,40 +175,37 @@ export class SystemConfigService {
 
     // Si no hay configuraciones de tenant, usar API general o fallback
     const apiData = this.apiService.getContactClassificationsForUI();
-    console.log('🔍 DEBUG: apiData.length =', apiData.length);
-    console.log('🔍 DEBUG: fallback.length =', this.systemConfig.tipificaciones.contacto.length);
-
-    const result = apiData.length > 0 ? apiData : this.systemConfig.tipificaciones.contacto;
-    console.log('✅ Returning contact classifications:', result.length, result);
-    return result;
+    return apiData.length > 0 ? apiData : this.systemConfig.tipificaciones.contacto;
   }
 
-  getManagementClassifications() {
+  getManagementClassifications(): ManagementClassification[] {
     // Primero intentar usar clasificaciones habilitadas del tenant
     const tenantData = this.apiService.tenantClassifications();
-    console.log('🔍 Total tenant classifications:', tenantData.length);
 
     if (tenantData.length > 0) {
-      // Debug: mostrar tipos disponibles
-      const types = [...new Set(tenantData.map(c => c.classification.classificationType))];
-      console.log('🔍 Available classification types:', types);
-
       // Mapear TODAS las clasificaciones habilitadas (el backend ya filtró por tenant/portfolio)
       // No filtrar por tipo - el tenant decide qué clasificaciones habilitar
-      const managementClassifications = tenantData
+      const managementClassifications: ManagementClassification[] = tenantData
         .filter(c => c.isEnabled)
-        .map(c => ({
-          id: c.classification.id, // Usar ID numérico para comparaciones
-          codigo: c.classification.code,
-          label: c.customName || c.classification.name,
-          requiere_pago: false, // TODO: Agregar esta info al backend o parsear metadataSchema
-          requiere_cronograma: false,
-          parentId: c.classification.parentClassificationId,
-          hierarchyLevel: c.classification.hierarchyLevel
-        }));
+        .map(c => {
+          // Parsear metadataSchema para obtener los flags reales
+          const metadata = c.classification.metadataSchema ? JSON.parse(c.classification.metadataSchema) : {};
 
-      console.log('✅ Management classifications from tenant config:', managementClassifications.length);
-      console.log('📊 Hierarchy levels found:', [...new Set(managementClassifications.map(c => c.hierarchyLevel))].sort());
+          return {
+            id: String(c.classification.id), // Convertir a string para el tipo ManagementClassification
+            codigo: c.classification.code,
+            label: c.customName || c.classification.name,
+            requiere_pago: metadata.requiresPayment || false,
+            requiere_cronograma: metadata.requiresSchedule || false,
+            requiere_seguimiento: metadata.requiresFollowUp || false,
+            parentId: c.classification.parentClassificationId,
+            hierarchyLevel: c.classification.hierarchyLevel,
+            // Campos del tipo de clasificación
+            suggestsFullAmount: c.classification.suggestsFullAmount,
+            allowsInstallmentSelection: c.classification.allowsInstallmentSelection,
+            requiresManualAmount: c.classification.requiresManualAmount
+          } as ManagementClassification;
+        });
 
       if (managementClassifications.length > 0) {
         return managementClassifications;
@@ -238,7 +233,13 @@ export class SystemConfigService {
     return this.systemConfig.cronograma_config;
   }
 
-  getManagementClassificationById(id: string) {
-    return this.systemConfig.tipificaciones.gestion.find(g => g.id === id);
+  getManagementClassificationById(id: string | number) {
+    // Primero buscar en las clasificaciones cargadas desde getManagementClassifications()
+    const managementClassifications = this.getManagementClassifications();
+
+    // Buscar por ID (puede ser número o string)
+    const found = managementClassifications.find((g: any) => g.id == id); // Usar == para comparar número con string
+
+    return found;
   }
 }

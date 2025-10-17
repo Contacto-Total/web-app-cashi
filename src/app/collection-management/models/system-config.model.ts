@@ -25,6 +25,10 @@ export interface ManagementClassification {
   requiere_seguimiento?: boolean;
   parentId?: number;          // NUEVO: ID del padre en la jerarquía
   hierarchyLevel?: number;    // NUEVO: Nivel en la jerarquía (1, 2, 3...)
+  // Campos del tipo de clasificación
+  suggestsFullAmount?: boolean | null;
+  allowsInstallmentSelection?: boolean | null;
+  requiresManualAmount?: boolean | null;
 }
 
 export interface PaymentNoReason {

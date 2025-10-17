@@ -42,6 +42,10 @@ import { MatMenuModule } from '@angular/material/menu';
           <mat-icon>business_center</mat-icon>
           Carteras
         </button>
+        <button mat-menu-item routerLink="/maintenance/customer-outputs">
+          <mat-icon>visibility</mat-icon>
+          Salidas de Cliente
+        </button>
       </mat-menu>
     </mat-toolbar>
   `,

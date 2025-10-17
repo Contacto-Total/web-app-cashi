@@ -1,0 +1,19 @@
+// Estilos para el componente de mantenimiento de outputs del cliente
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+// Asegurar que los checkboxes se vean bien en dark mode
+input[type="checkbox"] {
+  &:checked {
+    background-color: rgb(34, 197, 94); // green-600
+  }
+}

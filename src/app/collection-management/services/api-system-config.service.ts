@@ -20,6 +20,10 @@ export interface ManagementClassificationResource {
   requiresFollowUp: boolean;
   parentId?: number;
   hierarchyLevel?: number;
+  // Campos del tipo de clasificación
+  suggestsFullAmount?: boolean | null;
+  allowsInstallmentSelection?: boolean | null;
+  requiresManualAmount?: boolean | null;
 }
 
 export interface CampaignResource {
@@ -45,6 +49,10 @@ export interface ClassificationCatalogResource {
   isSystem: boolean;
   metadataSchema?: string;
   isActive: boolean;
+  // Campos del tipo de clasificación
+  suggestsFullAmount?: boolean | null;
+  allowsInstallmentSelection?: boolean | null;
+  requiresManualAmount?: boolean | null;
 }
 
 export interface TenantClassificationConfigResource {
@@ -121,8 +129,6 @@ export class ApiSystemConfigService {
    * Configura el tenant y portfolio actual y recarga las clasificaciones
    */
   setTenantAndPortfolio(tenantId: number, portfolioId?: number) {
-    console.log(`🔄 Cambiando contexto a tenant ${tenantId}${portfolioId ? ` portfolio ${portfolioId}` : ''}`);
-
     // IMPORTANTE: Limpiar clasificaciones anteriores ANTES de cambiar el contexto
     this.tenantClassifications.set([]);
     this.contactClassifications.set([]);
@@ -160,7 +166,6 @@ export class ApiSystemConfigService {
     return new Promise((resolve) => {
       // Si no hay tenant configurado, no intentar cargar
       if (!this.currentTenantId) {
-        console.log('⚠️ No hay tenant configurado, omitiendo carga de clasificaciones');
         resolve();
         return;
       }
@@ -170,15 +175,49 @@ export class ApiSystemConfigService {
         url += `?portfolioId=${this.currentPortfolioId}`;
       }
 
-      console.log(`🔄 Cargando clasificaciones para tenant ${this.currentTenantId}${this.currentPortfolioId ? ` y portfolio ${this.currentPortfolioId}` : ''}`);
       this.http.get<TenantClassificationConfigResource[]>(url)
         .pipe(
           tap(data => {
             this.tenantClassifications.set(data);
-            console.log('✅ Clasificaciones del tenant cargadas desde API:', data.length);
+
+            // Separar por tipo y actualizar los signals correspondientes
+            const contactClasses: ContactClassificationResource[] = data
+              .filter(c => c.classification.classificationType === 'CONTACT_RESULT')
+              .map(c => {
+                const metadata = c.classification.metadataSchema ? JSON.parse(c.classification.metadataSchema) : {};
+                return {
+                  id: c.classification.id,
+                  code: c.classification.code,
+                  label: c.classification.name,
+                  isSuccessful: metadata.isSuccessful || false
+                };
+              });
+
+            const managementClasses: ManagementClassificationResource[] = data
+              .filter(c => c.classification.classificationType === 'MANAGEMENT_TYPE' || c.classification.classificationType === 'CUSTOM')
+              .map(c => {
+                const metadata = c.classification.metadataSchema ? JSON.parse(c.classification.metadataSchema) : {};
+                return {
+                  id: c.classification.id,
+                  code: c.classification.code,
+                  label: c.classification.name,
+                  requiresPayment: metadata.requiresPayment || false,
+                  requiresSchedule: metadata.requiresSchedule || false,
+                  requiresFollowUp: metadata.requiresFollowUp || false,
+                  parentId: c.classification.parentClassificationId,
+                  hierarchyLevel: c.classification.hierarchyLevel,
+                  // Campos del tipo de clasificación
+                  suggestsFullAmount: c.classification.suggestsFullAmount,
+                  allowsInstallmentSelection: c.classification.allowsInstallmentSelection,
+                  requiresManualAmount: c.classification.requiresManualAmount
+                };
+              });
+
+            this.contactClassifications.set(contactClasses);
+            this.managementClassifications.set(managementClasses);
           }),
           catchError(error => {
-            console.warn('⚠️ Error cargando clasificaciones del tenant, usando fallback', error);
+            console.error('Error cargando clasificaciones del tenant:', error);
             return of([]);
           })
         )
@@ -195,10 +234,9 @@ export class ApiSystemConfigService {
         .pipe(
           tap(data => {
             this.contactClassifications.set(data);
-            console.log('✅ Tipificaciones de contacto cargadas desde API:', data.length);
           }),
           catchError(error => {
-            console.warn('⚠️ Error cargando tipificaciones de contacto, usando fallback', error);
+            console.error('Error cargando tipificaciones de contacto:', error);
             return of([]);
           })
         )
@@ -215,10 +253,9 @@ export class ApiSystemConfigService {
         .pipe(
           tap(data => {
             this.managementClassifications.set(data);
-            console.log('✅ Tipificaciones de gestión cargadas desde API:', data.length);
           }),
           catchError(error => {
-            console.warn('⚠️ Error cargando tipificaciones de gestión, usando fallback', error);
+            console.error('Error cargando tipificaciones de gestión:', error);
             return of([]);
           })
         )
@@ -235,10 +272,9 @@ export class ApiSystemConfigService {
         .pipe(
           tap(data => {
             this.campaigns.set(data);
-            console.log('✅ Campañas activas cargadas desde API:', data.length);
           }),
           catchError(error => {
-            console.warn('⚠️ Error cargando campañas, usando fallback', error);
+            console.error('Error cargando campañas:', error);
             return of([]);
           })
         )
@@ -274,10 +310,14 @@ export class ApiSystemConfigService {
       codigo: item.code,
       label: item.label,
       requiere_pago: item.requiresPayment,
-      requiere_fecha: item.requiresSchedule,
+      requiere_cronograma: item.requiresSchedule,
       requiere_seguimiento: item.requiresFollowUp,
       parentId: item.parentId,
-      hierarchyLevel: item.hierarchyLevel
+      hierarchyLevel: item.hierarchyLevel,
+      // Campos del tipo de clasificación
+      suggestsFullAmount: item.suggestsFullAmount,
+      allowsInstallmentSelection: item.allowsInstallmentSelection,
+      requiresManualAmount: item.requiresManualAmount
     }));
   }
 
@@ -307,15 +347,9 @@ export class ApiSystemConfigService {
       url += `?portfolioId=${this.currentPortfolioId}`;
     }
 
-    console.log(`🔄 Cargando campos dinámicos para clasificación ${classificationId}`);
     return this.http.get<ClassificationFieldsResponse>(url).pipe(
-      tap(response => {
-        console.log(`✅ Campos dinámicos cargados:`, response);
-        console.log(`   - Es hoja: ${response.isLeaf}`);
-        console.log(`   - Cantidad de campos: ${response.fields.length}`);
-      }),
       catchError(error => {
-        console.error('❌ Error cargando campos dinámicos:', error);
+        console.error('Error cargando campos dinámicos:', error);
         // Retornar respuesta vacía en caso de error
         return of({
           classificationId,
@@ -331,11 +365,9 @@ export class ApiSystemConfigService {
    */
   getAllFieldTypes(): Observable<FieldTypeResource[]> {
     const url = `${environment.apiUrl}/field-types`;
-    console.log('🔄 Cargando tipos de campo disponibles');
     return this.http.get<FieldTypeResource[]>(url).pipe(
-      tap(types => console.log(`✅ Tipos de campo cargados:`, types.length)),
       catchError(error => {
-        console.error('❌ Error cargando tipos de campo:', error);
+        console.error('Error cargando tipos de campo:', error);
         return of([]);
       })
     );
@@ -346,11 +378,9 @@ export class ApiSystemConfigService {
    */
   getFieldTypesForMainFields(): Observable<FieldTypeResource[]> {
     const url = `${environment.apiUrl}/field-types/main-fields`;
-    console.log('🔄 Cargando tipos de campo para campos principales');
     return this.http.get<FieldTypeResource[]>(url).pipe(
-      tap(types => console.log(`✅ Tipos para campos principales:`, types.length)),
       catchError(error => {
-        console.error('❌ Error cargando tipos para campos principales:', error);
+        console.error('Error cargando tipos para campos principales:', error);
         return of([]);
       })
     );
@@ -361,11 +391,9 @@ export class ApiSystemConfigService {
    */
   getFieldTypesForTableColumns(): Observable<FieldTypeResource[]> {
     const url = `${environment.apiUrl}/field-types/table-columns`;
-    console.log('🔄 Cargando tipos de campo para columnas de tabla');
     return this.http.get<FieldTypeResource[]>(url).pipe(
-      tap(types => console.log(`✅ Tipos para columnas de tabla:`, types.length)),
       catchError(error => {
-        console.error('❌ Error cargando tipos para columnas de tabla:', error);
+        console.error('Error cargando tipos para columnas de tabla:', error);
         return of([]);
       })
     );

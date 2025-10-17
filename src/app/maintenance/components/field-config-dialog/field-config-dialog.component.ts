@@ -10,11 +10,12 @@ import {
   TableColumn
 } from '../../models/field-config.model';
 import { ApiSystemConfigService, FieldTypeResource } from '../../../collection-management/services/api-system-config.service';
+import { DynamicFieldRendererComponent } from '../../../collection-management/components/dynamic-field-renderer/dynamic-field-renderer.component';
 
 @Component({
   selector: 'app-field-config-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, DynamicFieldRendererComponent],
   template: `
     @if (isOpen()) {
       <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -88,7 +89,8 @@ import { ApiSystemConfigService, FieldTypeResource } from '../../../collection-m
                         </div>
 
                         <!-- Requerido -->
-                        <div class="flex items-center pt-6">
+                        <div class="flex items-cent
+                        er pt-6">
                           <label class="flex items-center gap-2 cursor-pointer">
                             <input
                               type="checkbox"
@@ -163,6 +165,18 @@ import { ApiSystemConfigService, FieldTypeResource } from '../../../collection-m
                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                           placeholder="Instrucciones para el usuario..."
                         />
+                      </div>
+
+                      <!-- Vista Previa -->
+                      <div class="mt-4 p-4 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 rounded-lg border-2 border-purple-200 dark:border-purple-800">
+                        <div class="flex items-center gap-2 mb-3">
+                          <lucide-angular name="eye" [size]="16" class="text-purple-600 dark:text-purple-400"></lucide-angular>
+                          <h5 class="text-xs font-bold text-purple-900 dark:text-purple-200 uppercase tracking-wide">Vista Previa</h5>
+                        </div>
+                        <app-dynamic-field-renderer
+                          [schema]="{ fields: [field] }"
+                          (dataChange)="onPreviewDataChange($event)"
+                        ></app-dynamic-field-renderer>
                       </div>
                     </div>
 
@@ -252,7 +266,16 @@ export class FieldConfigDialogComponent {
     effect(() => {
       const schema = this.existingSchema();
       if (schema && schema.fields) {
-        this.fields.set(JSON.parse(JSON.stringify(schema.fields)));
+        // Normalizar tipos a lowercase para que coincidan con los typeCode del backend
+        const normalizedFields = JSON.parse(JSON.stringify(schema.fields)).map((field: FieldConfig) => ({
+          ...field,
+          type: field.type?.toLowerCase() || 'text',
+          columns: field.columns?.map(col => ({
+            ...col,
+            type: col.type?.toLowerCase() || 'text'
+          }))
+        }));
+        this.fields.set(normalizedFields);
       } else {
         this.fields.set([]);
       }
@@ -317,5 +340,9 @@ export class FieldConfigDialogComponent {
 
   handleCancel() {
     this.cancel.emit();
+  }
+
+  onPreviewDataChange(_data: any) {
+    // No hacemos nada con los datos de la preview, es solo para visualización
   }
 }

@@ -20,6 +20,7 @@ export type FieldType =
   | 'decimal'      // Número con decimales
   | 'currency'     // Valor monetario
   | 'date'         // Selector de fecha
+  | 'time'         // Selector de hora
   | 'datetime'     // Selector de fecha y hora
   | 'checkbox'     // Casilla de verificación
   | 'select'       // Lista desplegable

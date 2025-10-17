@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { PaymentSchedule } from '../models/payment-schedule.model';
 
 export interface ManagementResource {
   id: number;
@@ -44,6 +45,7 @@ export interface PaymentDetailResource {
   bankName?: string;
 }
 
+
 export interface CreateManagementRequest {
   customerId: string;
   advisorId: string;
@@ -85,6 +87,7 @@ export interface RegisterPaymentRequest {
 })
 export class ManagementService {
   private readonly baseUrl = `${environment.apiUrl}/managements`;
+  private readonly scheduleUrl = `${environment.apiUrl}/payment-schedules`;
 
   constructor(private http: HttpClient) {}
 
@@ -106,6 +109,11 @@ export class ManagementService {
 
   getManagementsByCampaign(campaignId: string): Observable<ManagementResource[]> {
     return this.http.get<ManagementResource[]>(`${this.baseUrl}/campaign/${campaignId}`);
+  }
+
+  getActiveSchedulesByCustomer(customerId: string): Observable<PaymentSchedule[]> {
+    console.log('[SCHEDULE] Fetching active schedules for customer:', customerId);
+    return this.http.get<PaymentSchedule[]>(`${this.scheduleUrl}/customer/${customerId}/active`);
   }
 
   startCall(managementId: string, request: StartCallRequest): Observable<ManagementResource> {
