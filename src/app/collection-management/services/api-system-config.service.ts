@@ -34,12 +34,12 @@ export interface CampaignResource {
   isActive: boolean;
 }
 
-export interface ClassificationCatalogResource {
+export interface TypificationCatalogResource {
   id: number;
   code: string;
   name: string;
   classificationType: string;
-  parentClassificationId?: number;
+  parentTypificationId?: number;
   hierarchyLevel: number;
   hierarchyPath: string;
   description?: string;
@@ -55,11 +55,11 @@ export interface ClassificationCatalogResource {
   requiresManualAmount?: boolean | null;
 }
 
-export interface TenantClassificationConfigResource {
+export interface TenantTypificationConfigResource {
   id: number;
   tenantId: number;
   portfolioId?: number;
-  classification: ClassificationCatalogResource;
+  typification: TypificationCatalogResource;
   isEnabled: boolean;
   isRequired: boolean;
   customName?: string;
@@ -104,13 +104,13 @@ export interface FieldTypeResource {
 })
 export class ApiSystemConfigService {
   private readonly baseUrl = `${environment.apiUrl}/system-config`;
-  private readonly classificationsUrl = `${environment.apiUrl}/classifications`;
+  private readonly classificationsUrl = `${environment.apiUrl}/typifications`;
 
   // Signals para datos reactivos
   contactClassifications = signal<ContactClassificationResource[]>([]);
   managementClassifications = signal<ManagementClassificationResource[]>([]);
   campaigns = signal<CampaignResource[]>([]);
-  tenantClassifications = signal<TenantClassificationConfigResource[]>([]);
+  tenantClassifications = signal<TenantTypificationConfigResource[]>([]);
 
   // Estado de carga
   isLoading = signal(false);
@@ -170,46 +170,46 @@ export class ApiSystemConfigService {
         return;
       }
 
-      let url = `${environment.apiUrl}/tenants/${this.currentTenantId}/classifications`;
+      let url = `${environment.apiUrl}/tenants/${this.currentTenantId}/typifications`;
       if (this.currentPortfolioId) {
         url += `?portfolioId=${this.currentPortfolioId}`;
       }
 
-      this.http.get<TenantClassificationConfigResource[]>(url)
+      this.http.get<TenantTypificationConfigResource[]>(url)
         .pipe(
           tap(data => {
             this.tenantClassifications.set(data);
 
             // Separar por tipo y actualizar los signals correspondientes
             const contactClasses: ContactClassificationResource[] = data
-              .filter(c => c.classification.classificationType === 'CONTACT_RESULT')
+              .filter(c => c.typification.classificationType === 'CONTACT_RESULT')
               .map(c => {
-                const metadata = c.classification.metadataSchema ? JSON.parse(c.classification.metadataSchema) : {};
+                const metadata = c.typification.metadataSchema ? JSON.parse(c.typification.metadataSchema) : {};
                 return {
-                  id: c.classification.id,
-                  code: c.classification.code,
-                  label: c.classification.name,
+                  id: c.typification.id,
+                  code: c.typification.code,
+                  label: c.typification.name,
                   isSuccessful: metadata.isSuccessful || false
                 };
               });
 
             const managementClasses: ManagementClassificationResource[] = data
-              .filter(c => c.classification.classificationType === 'MANAGEMENT_TYPE' || c.classification.classificationType === 'CUSTOM')
+              .filter(c => c.typification.classificationType === 'MANAGEMENT_TYPE' || c.typification.classificationType === 'CUSTOM')
               .map(c => {
-                const metadata = c.classification.metadataSchema ? JSON.parse(c.classification.metadataSchema) : {};
+                const metadata = c.typification.metadataSchema ? JSON.parse(c.typification.metadataSchema) : {};
                 return {
-                  id: c.classification.id,
-                  code: c.classification.code,
-                  label: c.classification.name,
+                  id: c.typification.id,
+                  code: c.typification.code,
+                  label: c.typification.name,
                   requiresPayment: metadata.requiresPayment || false,
                   requiresSchedule: metadata.requiresSchedule || false,
                   requiresFollowUp: metadata.requiresFollowUp || false,
-                  parentId: c.classification.parentClassificationId,
-                  hierarchyLevel: c.classification.hierarchyLevel,
+                  parentId: c.typification.parentTypificationId,
+                  hierarchyLevel: c.typification.hierarchyLevel,
                   // Campos del tipo de clasificación
-                  suggestsFullAmount: c.classification.suggestsFullAmount,
-                  allowsInstallmentSelection: c.classification.allowsInstallmentSelection,
-                  requiresManualAmount: c.classification.requiresManualAmount
+                  suggestsFullAmount: c.typification.suggestsFullAmount,
+                  allowsInstallmentSelection: c.typification.allowsInstallmentSelection,
+                  requiresManualAmount: c.typification.requiresManualAmount
                 };
               });
 
@@ -230,7 +230,7 @@ export class ApiSystemConfigService {
    */
   private loadContactClassifications(): Promise<void> {
     return new Promise((resolve) => {
-      this.http.get<ContactClassificationResource[]>(`${this.baseUrl}/contact-classifications`)
+      this.http.get<ContactClassificationResource[]>(`${this.baseUrl}/contact-typifications`)
         .pipe(
           tap(data => {
             this.contactClassifications.set(data);
@@ -249,7 +249,7 @@ export class ApiSystemConfigService {
    */
   private loadManagementClassifications(): Promise<void> {
     return new Promise((resolve) => {
-      this.http.get<ManagementClassificationResource[]>(`${this.baseUrl}/management-classifications`)
+      this.http.get<ManagementClassificationResource[]>(`${this.baseUrl}/management-typifications`)
         .pipe(
           tap(data => {
             this.managementClassifications.set(data);
@@ -337,12 +337,12 @@ export class ApiSystemConfigService {
    * Obtiene los campos dinámicos configurados para una clasificación específica
    * Solo las clasificaciones "hoja" (sin hijos) deberían tener campos
    */
-  getClassificationFields(classificationId: number): Observable<ClassificationFieldsResponse> {
+  getClassificationFields(typificationId: number): Observable<ClassificationFieldsResponse> {
     if (!this.currentTenantId) {
       throw new Error('No hay tenant configurado');
     }
 
-    let url = `${environment.apiUrl}/tenants/${this.currentTenantId}/classifications/${classificationId}/fields`;
+    let url = `${environment.apiUrl}/tenants/${this.currentTenantId}/typifications/${typificationId}/fields`;
     if (this.currentPortfolioId) {
       url += `?portfolioId=${this.currentPortfolioId}`;
     }
@@ -352,7 +352,7 @@ export class ApiSystemConfigService {
         console.error('Error cargando campos dinámicos:', error);
         // Retornar respuesta vacía en caso de error
         return of({
-          classificationId,
+          typificationId,
           isLeaf: false,
           fields: []
         } as ClassificationFieldsResponse);

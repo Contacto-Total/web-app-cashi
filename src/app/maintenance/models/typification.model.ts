@@ -7,12 +7,12 @@ export enum ClassificationType {
   CUSTOM = 'CUSTOM'
 }
 
-export interface ClassificationCatalog {
+export interface TypificationCatalog {
   id: number;
   code: string;
   name: string;
   classificationType: ClassificationType;
-  parentClassificationId?: number;
+  parentTypificationId?: number;
   hierarchyLevel: number;
   hierarchyPath: string;
   description?: string;
@@ -30,12 +30,12 @@ export interface ClassificationCatalog {
   requiresManualAmount?: boolean | null;
 }
 
-export interface TenantClassificationConfig {
+export interface TenantTypificationConfig {
   id: number;
   tenantId: number;
   portfolioId?: number;
-  classificationId: number;
-  classification: ClassificationCatalog;
+  typificationId: number;
+  typification: TypificationCatalog;
   isEnabled: boolean;
   customName?: string;
   customIcon?: string;
@@ -50,11 +50,11 @@ export interface TenantClassificationConfig {
   effectiveColor?: string;
 }
 
-export interface CreateClassificationCommand {
+export interface CreateTypificationCommand {
   code: string;
   name: string;
   classificationType: ClassificationType;
-  parentClassificationId?: number;
+  parentTypificationId?: number;
   description?: string;
   displayOrder?: number;
   iconName?: string;
@@ -63,7 +63,7 @@ export interface CreateClassificationCommand {
   metadataSchema?: string;
 }
 
-export interface UpdateClassificationCommand {
+export interface UpdateTypificationCommand {
   name?: string;
   description?: string;
   displayOrder?: number;
@@ -73,7 +73,7 @@ export interface UpdateClassificationCommand {
   metadataSchema?: string;
 }
 
-export interface UpdateClassificationConfigCommand {
+export interface UpdateTypificationConfigCommand {
   isEnabled?: boolean;
   customName?: string;
   customIcon?: string;
@@ -85,9 +85,9 @@ export interface UpdateClassificationConfigCommand {
   validationRules?: string;
 }
 
-export interface ClassificationTreeNode {
-  classification: ClassificationCatalog;
-  config?: TenantClassificationConfig;
-  children: ClassificationTreeNode[];
+export interface TypificationTreeNode {
+  typification: TypificationCatalog;
+  config?: TenantTypificationConfig;
+  children: TypificationTreeNode[];
   level: number;
 }

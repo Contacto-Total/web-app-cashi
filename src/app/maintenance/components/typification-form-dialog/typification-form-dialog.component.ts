@@ -2,13 +2,13 @@ import { Component, EventEmitter, Input, Output, signal, OnInit } from '@angular
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { ClassificationService } from '../../services/classification.service';
+import { TypificationService } from '../../services/typification.service';
 import {
-  ClassificationCatalog,
+  TypificationCatalog,
   ClassificationType,
-  CreateClassificationCommand,
-  UpdateClassificationCommand
-} from '../../models/classification.model';
+  CreateTypificationCommand,
+  UpdateTypificationCommand
+} from '../../models/typification.model';
 import { FieldConfigDialogComponent } from '../field-config-dialog/field-config-dialog.component';
 import { MetadataSchema } from '../../models/field-config.model';
 
@@ -25,7 +25,7 @@ interface ClassificationForm {
 }
 
 @Component({
-  selector: 'app-classification-form-dialog',
+  selector: 'app-typification-form-dialog',
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule, FieldConfigDialogComponent],
   template: `
@@ -309,14 +309,14 @@ interface ClassificationForm {
     }
   `
 })
-export class ClassificationFormDialogComponent implements OnInit {
+export class TypificationFormDialogComponent implements OnInit {
   @Input() mode: 'create' | 'edit' = 'create';
-  @Input() classification?: ClassificationCatalog;
-  @Input() parentClassification?: ClassificationCatalog;
+  @Input() typification?: TypificationCatalog;
+  @Input() parentClassification?: TypificationCatalog;
   @Input() defaultType?: ClassificationType;
   @Input() tenantId?: number;
   @Input() portfolioId?: number;
-  @Output() save = new EventEmitter<ClassificationCatalog>();
+  @Output() save = new EventEmitter<TypificationCatalog>();
   @Output() cancel = new EventEmitter<void>();
 
   ClassificationType = ClassificationType;
@@ -377,7 +377,7 @@ export class ClassificationFormDialogComponent implements OnInit {
   saving = signal(false);
   errors = signal<Record<string, string>>({});
 
-  constructor(private classificationService: ClassificationService) {}
+  constructor(private classificationService: TypificationService) {}
 
   ngOnInit() {
     this.isEditMode = this.mode === 'edit';
@@ -386,18 +386,18 @@ export class ClassificationFormDialogComponent implements OnInit {
       this.form.classificationType = this.defaultType;
     }
 
-    if (this.isEditMode && this.classification) {
+    if (this.isEditMode && this.typification) {
       this.form = {
-        code: this.classification.code,
-        name: this.classification.name,
-        classificationType: this.classification.classificationType,
-        description: this.classification.description || '',
-        displayOrder: this.classification.displayOrder || 0,
-        iconName: this.classification.iconName || '',
-        colorHex: this.classification.colorHex || '#3B82F6',
-        isActive: this.classification.isActive,
-        metadataSchema: this.classification.metadataSchema
-          ? JSON.parse(this.classification.metadataSchema)
+        code: this.typification.code,
+        name: this.typification.name,
+        classificationType: this.typification.classificationType,
+        description: this.typification.description || '',
+        displayOrder: this.typification.displayOrder || 0,
+        iconName: this.typification.iconName || '',
+        colorHex: this.typification.colorHex || '#3B82F6',
+        isActive: this.typification.isActive,
+        metadataSchema: this.typification.metadataSchema
+          ? JSON.parse(this.typification.metadataSchema)
           : null
       };
     }
@@ -427,19 +427,19 @@ export class ClassificationFormDialogComponent implements OnInit {
 
     this.saving.set(true);
 
-    if (this.isEditMode && this.classification) {
-      this.updateClassification();
+    if (this.isEditMode && this.typification) {
+      this.updateTypification();
     } else {
-      this.createClassification();
+      this.createTypification();
     }
   }
 
-  createClassification() {
-    const command: CreateClassificationCommand = {
+  createTypification() {
+    const command: CreateTypificationCommand = {
       code: this.form.code.trim(),
       name: this.form.name.trim(),
       classificationType: this.form.classificationType as ClassificationType,
-      parentClassificationId: this.parentClassification?.id,
+      parentTypificationId: this.parentClassification?.id,
       description: this.form.description.trim() || undefined,
       displayOrder: this.form.displayOrder,
       iconName: this.form.iconName.trim() || undefined,
@@ -447,7 +447,7 @@ export class ClassificationFormDialogComponent implements OnInit {
       metadataSchema: this.form.metadataSchema ? JSON.stringify(this.form.metadataSchema) : undefined
     };
 
-    this.classificationService.createClassification(command).subscribe({
+    this.classificationService.createTypification(command).subscribe({
       next: (created) => {
         console.log('✅ Clasificación creada:', created);
 
@@ -485,10 +485,10 @@ export class ClassificationFormDialogComponent implements OnInit {
     });
   }
 
-  updateClassification() {
-    if (!this.classification) return;
+  updateTypification() {
+    if (!this.typification) return;
 
-    const command: UpdateClassificationCommand = {
+    const command: UpdateTypificationCommand = {
       name: this.form.name.trim(),
       description: this.form.description.trim() || undefined,
       displayOrder: this.form.displayOrder,
@@ -498,7 +498,7 @@ export class ClassificationFormDialogComponent implements OnInit {
       metadataSchema: this.form.metadataSchema ? JSON.stringify(this.form.metadataSchema) : undefined
     };
 
-    this.classificationService.updateClassification(this.classification.id, command).subscribe({
+    this.classificationService.updateTypification(this.typification.id, command).subscribe({
       next: (updated) => {
         this.saving.set(false);
         this.save.emit(updated);

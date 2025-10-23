@@ -11,16 +11,40 @@ export const routes: Routes = [
     loadComponent: () => import('./collection-management/pages/collection-management.page').then(m => m.CollectionManagementPage)
   },
   {
-    path: 'maintenance/classifications',
-    loadComponent: () => import('./maintenance/components/classification-maintenance/classification-maintenance.component').then(m => m.ClassificationMaintenanceComponent)
+    path: 'maintenance/typifications',
+    loadComponent: () => import('./maintenance/components/typification-maintenance/typification-maintenance.component').then(m => m.TypificationMaintenanceComponent)
+  },
+  {
+    path: 'maintenance/setup-wizard',
+    loadComponent: () => import('./maintenance/components/setup-wizard/setup-wizard.component').then(m => m.SetupWizardComponent)
+  },
+  {
+    path: 'maintenance/tenants',
+    loadComponent: () => import('./maintenance/components/tenant-maintenance/tenant-maintenance.component').then(m => m.TenantMaintenanceComponent)
   },
   {
     path: 'maintenance/portfolios',
     loadComponent: () => import('./maintenance/components/portfolio-maintenance/portfolio-maintenance.component').then(m => m.PortfolioMaintenanceComponent)
   },
   {
+    path: 'maintenance/subportfolios',
+    loadComponent: () => import('./maintenance/components/subportfolio-maintenance/subportfolio-maintenance.component').then(m => m.SubPortfolioMaintenanceComponent)
+  },
+  {
     path: 'maintenance/customer-outputs',
     loadComponent: () => import('./maintenance/components/customer-output-maintenance/customer-output-maintenance.component').then(m => m.CustomerOutputMaintenanceComponent)
+  },
+  {
+    path: 'maintenance/header-configuration',
+    loadComponent: () => import('./maintenance/components/header-configuration/header-configuration.component').then(m => m.HeaderConfigurationComponent)
+  },
+  {
+    path: 'data-load/initial',
+    loadComponent: () => import('./data-load/components/initial-load/initial-load.component').then(m => m.InitialLoadComponent)
+  },
+  {
+    path: 'data-load/daily',
+    loadComponent: () => import('./data-load/components/daily-load/daily-load.component').then(m => m.DailyLoadComponent)
   },
   {
     path: '**',

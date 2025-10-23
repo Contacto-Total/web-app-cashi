@@ -5,7 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ThemeService } from '../../../shared/services/theme.service';
 import { Tenant } from '../../models/tenant.model';
 import { Portfolio } from '../../models/portfolio.model';
-import { ClassificationService } from '../../services/classification.service';
+import { TypificationService } from '../../services/typification.service';
 import { CustomerOutputConfigService } from '../../services/customer-output-config.service';
 
 /**
@@ -370,7 +370,7 @@ export class CustomerOutputMaintenanceComponent implements OnInit {
   ];
 
   constructor(
-    private classificationService: ClassificationService,
+    private classificationService: TypificationService,
     private customerOutputConfigService: CustomerOutputConfigService,
     public themeService: ThemeService
   ) {}

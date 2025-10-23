@@ -541,16 +541,16 @@ export class DynamicFieldRendererComponent {
     const currentData = { ...this.fieldData() };
     if (Array.isArray(currentData[fieldId])) {
       const currentRowCount = (currentData[fieldId] as any[]).length;
-      const classification = this.selectedClassification();
+      const typification = this.selectedClassification();
 
       // Validar mínimo de filas según clasificación
-      if (classification?.codigo === 'PF') {
+      if (typification?.codigo === 'PF') {
         // Pago Fraccionado: mínimo 2 filas
         if (currentRowCount <= 2) {
           alert('Los Pagos Fraccionados requieren mínimo 2 cuotas. No se puede eliminar más filas.');
           return;
         }
-      } else if (classification?.codigo === 'CF') {
+      } else if (typification?.codigo === 'CF') {
         // Convenio Formal: mínimo 1 fila
         if (currentRowCount <= 1) {
           alert('Los Convenios requieren mínimo 1 cuota. No se puede eliminar esta fila.');
@@ -663,10 +663,10 @@ export class DynamicFieldRendererComponent {
   }
 
   getMaxDate(column: any): string | undefined {
-    const classification = this.selectedClassification();
+    const typification = this.selectedClassification();
 
     // Para Pago Fraccionado (PF), limitar fechas al mes actual
-    if (classification?.codigo === 'PF') {
+    if (typification?.codigo === 'PF') {
       return this.getEndOfMonthDate();
     }
 

@@ -84,7 +84,7 @@ export interface ClassificationField {
 }
 
 export interface ClassificationFieldsResponse {
-  classificationId: number;
+  typificationId: number;
   isLeaf: boolean; // true si la clasificación es hoja (sin hijos)
   fields: ClassificationField[];
 }

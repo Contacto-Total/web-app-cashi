@@ -161,11 +161,11 @@ export class SystemConfigService {
 
     if (tenantData.length > 0) {
       const contactClassifications = tenantData
-        .filter(c => c.classification.classificationType === 'CONTACT_RESULT' && c.isEnabled)
+        .filter(c => c.typification.classificationType === 'CONTACT_RESULT' && c.isEnabled)
         .map(c => ({
-          id: c.classification.id, // Usar ID numérico para comparaciones
-          codigo: c.classification.code,
-          label: c.customName || c.classification.name
+          id: c.typification.id, // Usar ID numérico para comparaciones
+          codigo: c.typification.code,
+          label: c.customName || c.typification.name
         }));
 
       if (contactClassifications.length > 0) {
@@ -189,21 +189,21 @@ export class SystemConfigService {
         .filter(c => c.isEnabled)
         .map(c => {
           // Parsear metadataSchema para obtener los flags reales
-          const metadata = c.classification.metadataSchema ? JSON.parse(c.classification.metadataSchema) : {};
+          const metadata = c.typification.metadataSchema ? JSON.parse(c.typification.metadataSchema) : {};
 
           return {
-            id: String(c.classification.id), // Convertir a string para el tipo ManagementClassification
-            codigo: c.classification.code,
-            label: c.customName || c.classification.name,
+            id: String(c.typification.id), // Convertir a string para el tipo ManagementClassification
+            codigo: c.typification.code,
+            label: c.customName || c.typification.name,
             requiere_pago: metadata.requiresPayment || false,
             requiere_cronograma: metadata.requiresSchedule || false,
             requiere_seguimiento: metadata.requiresFollowUp || false,
-            parentId: c.classification.parentClassificationId,
-            hierarchyLevel: c.classification.hierarchyLevel,
+            parentId: c.typification.parentTypificationId,
+            hierarchyLevel: c.typification.hierarchyLevel,
             // Campos del tipo de clasificación
-            suggestsFullAmount: c.classification.suggestsFullAmount,
-            allowsInstallmentSelection: c.classification.allowsInstallmentSelection,
-            requiresManualAmount: c.classification.requiresManualAmount
+            suggestsFullAmount: c.typification.suggestsFullAmount,
+            allowsInstallmentSelection: c.typification.allowsInstallmentSelection,
+            requiresManualAmount: c.typification.requiresManualAmount
           } as ManagementClassification;
         });
 

@@ -2,27 +2,27 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { ClassificationService } from '../../services/classification.service';
+import { TypificationService } from '../../services/typification.service';
 import { ThemeService } from '../../../shared/services/theme.service';
 import {
-  ClassificationCatalog,
-  TenantClassificationConfig,
+  TypificationCatalog,
+  TenantTypificationConfig,
   ClassificationType,
-  ClassificationTreeNode
-} from '../../models/classification.model';
+  TypificationTreeNode
+} from '../../models/typification.model';
 import { Portfolio } from '../../models/portfolio.model';
 import { Tenant } from '../../models/tenant.model';
-import { ClassificationFormDialogComponent } from '../classification-form-dialog/classification-form-dialog.component';
+import { TypificationFormDialogComponent } from '../typification-form-dialog/typification-form-dialog.component';
 import { CategoryFormDialogComponent } from '../category-form-dialog/category-form-dialog.component';
 
 @Component({
-  selector: 'app-classification-maintenance',
+  selector: 'app-typification-maintenance',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, ClassificationFormDialogComponent, CategoryFormDialogComponent],
-  templateUrl: './classification-maintenance.component.html',
-  styleUrls: ['./classification-maintenance.component.scss']
+  imports: [CommonModule, FormsModule, LucideAngularModule, TypificationFormDialogComponent, CategoryFormDialogComponent],
+  templateUrl: './typification-maintenance.component.html',
+  styleUrls: ['./typification-maintenance.component.scss']
 })
-export class ClassificationMaintenanceComponent implements OnInit {
+export class TypificationMaintenanceComponent implements OnInit {
   selectedTenantId?: number;
   selectedPortfolioId?: number;
   selectedType?: ClassificationType;
@@ -32,19 +32,19 @@ export class ClassificationMaintenanceComponent implements OnInit {
   showClassificationDialog = signal(false);
   showCategoryDialog = signal(false);
   classificationDialogMode = signal<'create' | 'edit'>('create');
-  selectedClassificationForEdit = signal<ClassificationCatalog | undefined>(undefined);
-  parentClassificationForCreate = signal<ClassificationCatalog | undefined>(undefined);
+  selectedClassificationForEdit = signal<TypificationCatalog | undefined>(undefined);
+  parentClassificationForCreate = signal<TypificationCatalog | undefined>(undefined);
 
   classificationTypes = Object.values(ClassificationType);
-  classifications: ClassificationCatalog[] = [];
-  tenantConfigs: TenantClassificationConfig[] = [];
-  treeNodes: ClassificationTreeNode[] = [];
+  typifications: TypificationCatalog[] = [];
+  tenantConfigs: TenantTypificationConfig[] = [];
+  treeNodes: TypificationTreeNode[] = [];
   expandedNodes = new Set<number>();
   tenants: Tenant[] = [];
   portfolios: Portfolio[] = [];
 
   constructor(
-    private classificationService: ClassificationService,
+    private classificationService: TypificationService,
     public themeService: ThemeService
   ) {}
 
@@ -70,12 +70,12 @@ export class ClassificationMaintenanceComponent implements OnInit {
   onTenantChange() {
     this.selectedPortfolioId = undefined;
     this.portfolios = [];
-    this.classifications = [];
+    this.typifications = [];
     this.treeNodes = [];
 
     if (this.selectedTenantId) {
       this.loadPortfolios();
-      this.loadClassifications();
+      this.loadTypifications();
     }
   }
 
@@ -92,28 +92,42 @@ export class ClassificationMaintenanceComponent implements OnInit {
     });
   }
 
-  loadClassifications() {
+  loadTypifications() {
     if (!this.selectedTenantId) return;
 
     this.loading.set(true);
 
+    // Load ALL tenant configurations (including disabled) for maintenance view
     const request$ = this.selectedType
-      ? this.classificationService.getClassificationsByType(this.selectedType)
-      : this.classificationService.getAllClassifications();
+      ? this.classificationService.getTenantClassificationsByType(
+          this.selectedTenantId,
+          this.selectedType,
+          this.selectedPortfolioId
+        )
+      : this.classificationService.getTenantClassifications(
+          this.selectedTenantId,
+          this.selectedPortfolioId,
+          true // includeDisabled = true for maintenance view
+        );
 
     request$.subscribe({
-      next: (data) => {
-        this.classifications = data;
-        this.loadTenantConfigs();
+      next: (configs) => {
+        this.tenantConfigs = configs;
+        // Extract typifications from tenant configs
+        this.typifications = configs.map(config => config.typification);
+        this.buildTree();
+        this.loading.set(false);
       },
       error: (error) => {
         this.loading.set(false);
-        console.error('Error loading classifications:', error);
+        console.error('Error loading typifications:', error);
       }
     });
   }
 
   loadTenantConfigs() {
+    // This method is now redundant, keeping for backward compatibility
+    // but it's no longer called
     if (!this.selectedTenantId) return;
 
     const request$ = this.selectedType
@@ -142,44 +156,41 @@ export class ClassificationMaintenanceComponent implements OnInit {
   }
 
   buildTree() {
-    const configMap = new Map<number, TenantClassificationConfig>();
+    const configMap = new Map<number, TenantTypificationConfig>();
     this.tenantConfigs.forEach(config => {
-      configMap.set(config.classificationId, config);
+      configMap.set(config.typificationId, config);
     });
 
-    const nodeMap = new Map<number, ClassificationTreeNode>();
+    const nodeMap = new Map<number, TypificationTreeNode>();
 
-    this.classifications.forEach(classification => {
-      const node: ClassificationTreeNode = {
-        classification,
-        config: configMap.get(classification.id),
+    this.typifications.forEach(typification => {
+      const node: TypificationTreeNode = {
+        typification,
+        config: configMap.get(typification.id),
         children: [],
-        level: classification.hierarchyLevel
+        level: typification.hierarchyLevel
       };
-      nodeMap.set(classification.id, node);
+      nodeMap.set(typification.id, node);
     });
 
-    const roots: ClassificationTreeNode[] = [];
+    const roots: TypificationTreeNode[] = [];
 
-    this.classifications.forEach(classification => {
-      const node = nodeMap.get(classification.id)!;
-      if (classification.parentClassificationId) {
-        const parent = nodeMap.get(classification.parentClassificationId);
+    this.typifications.forEach(typification => {
+      const node = nodeMap.get(typification.id)!;
+      if (typification.parentTypificationId) {
+        const parent = nodeMap.get(typification.parentTypificationId);
         if (parent) {
           parent.children.push(node);
-        } else {
-          // Si tiene padre pero el padre no está en el array filtrado, tratarlo como root
-          roots.push(node);
         }
       } else {
         roots.push(node);
       }
     });
 
-    const sortNodes = (nodes: ClassificationTreeNode[]) => {
+    const sortNodes = (nodes: TypificationTreeNode[]) => {
       nodes.sort((a, b) => {
-        const orderA = a.classification.displayOrder || 0;
-        const orderB = b.classification.displayOrder || 0;
+        const orderA = a.typification.displayOrder || 0;
+        const orderB = b.typification.displayOrder || 0;
         return orderA - orderB;
       });
       nodes.forEach(node => {
@@ -207,7 +218,7 @@ export class ClassificationMaintenanceComponent implements OnInit {
   }
 
   expandAll() {
-    this.classifications.forEach(c => this.expandedNodes.add(c.id));
+    this.typifications.forEach(c => this.expandedNodes.add(c.id));
   }
 
   collapseAll() {
@@ -215,14 +226,14 @@ export class ClassificationMaintenanceComponent implements OnInit {
   }
 
   onTypeChange() {
-    this.loadClassifications();
+    this.loadTypifications();
   }
 
   onPortfolioChange() {
-    this.loadTenantConfigs();
+    this.loadTypifications();
   }
 
-  toggleClassification(node: ClassificationTreeNode, event: Event) {
+  toggleTypification(node: TypificationTreeNode, event: Event) {
     if (!this.selectedTenantId) return;
 
     const target = event.target as HTMLInputElement;
@@ -231,22 +242,22 @@ export class ClassificationMaintenanceComponent implements OnInit {
     const action$ = enabled
       ? this.classificationService.enableClassification(
           this.selectedTenantId,
-          node.classification.id,
+          node.typification.id,
           this.selectedPortfolioId
         )
       : this.classificationService.disableClassification(
           this.selectedTenantId,
-          node.classification.id,
+          node.typification.id,
           this.selectedPortfolioId
         );
 
     action$.subscribe({
       next: () => {
         this.showSuccessMessage();
-        this.loadTenantConfigs();
+        this.loadTypifications();
       },
       error: (error) => {
-        console.error('Error toggling classification:', error);
+        console.error('Error toggling typification:', error);
         target.checked = !enabled;
       }
     });
@@ -264,16 +275,16 @@ export class ClassificationMaintenanceComponent implements OnInit {
     this.showClassificationDialog.set(true);
   }
 
-  openCreateChildDialog(parent: ClassificationCatalog) {
+  openCreateChildDialog(parent: TypificationCatalog) {
     this.classificationDialogMode.set('create');
     this.selectedClassificationForEdit.set(undefined);
     this.parentClassificationForCreate.set(parent);
     this.showClassificationDialog.set(true);
   }
 
-  openEditDialog(classification: ClassificationCatalog) {
+  openEditDialog(typification: TypificationCatalog) {
     this.classificationDialogMode.set('edit');
-    this.selectedClassificationForEdit.set(classification);
+    this.selectedClassificationForEdit.set(typification);
     this.parentClassificationForCreate.set(undefined);
     this.showClassificationDialog.set(true);
   }
@@ -284,28 +295,28 @@ export class ClassificationMaintenanceComponent implements OnInit {
     this.parentClassificationForCreate.set(undefined);
   }
 
-  onClassificationSaved(classification: ClassificationCatalog) {
+  onClassificationSaved(typification: TypificationCatalog) {
     this.showClassificationDialog.set(false);
     this.selectedClassificationForEdit.set(undefined);
     this.parentClassificationForCreate.set(undefined);
     this.showSuccessMessage();
-    this.loadClassifications();
+    this.loadTypifications();
   }
 
-  deleteClassification(classification: ClassificationCatalog) {
-    if (classification.isSystem) {
+  deleteTypification(typification: TypificationCatalog) {
+    if (typification.isSystem) {
       alert('No se pueden eliminar tipificaciones del sistema');
       return;
     }
 
-    if (!confirm(`¿Está seguro de eliminar la tipificación "${classification.name}"?\n\nEsta acción no se puede deshacer.`)) {
+    if (!confirm(`¿Está seguro de eliminar la tipificación "${typification.name}"?\n\nEsta acción no se puede deshacer.`)) {
       return;
     }
 
-    this.classificationService.deleteClassification(classification.id).subscribe({
+    this.classificationService.deleteTypification(typification.id).subscribe({
       next: () => {
         this.showSuccessMessage();
-        this.loadClassifications();
+        this.loadTypifications();
       },
       error: (error) => {
         console.error('Error al eliminar tipificación:', error);
@@ -331,7 +342,7 @@ export class ClassificationMaintenanceComponent implements OnInit {
   onCategorySaved(categoryName: string) {
     this.showCategoryDialog.set(false);
     this.showSuccessMessage();
-    // Reload classification types
+    // Reload typification types
     this.classificationTypes = Object.values(ClassificationType);
   }
 
@@ -341,112 +352,58 @@ export class ClassificationMaintenanceComponent implements OnInit {
       [ClassificationType.MANAGEMENT_TYPE]: 'Tipo de Gestión',
       [ClassificationType.PAYMENT_TYPE]: 'Tipo de Pago',
       [ClassificationType.COMPLAINT_TYPE]: 'Tipo de Reclamo',
-      [ClassificationType.PAYMENT_SCHEDULE]: 'Cronograma de Pago',
+      [ClassificationType.PAYMENT_SCHEDULE]: 'Cronograma de Pagos',
       [ClassificationType.CUSTOM]: 'Personalizado'
     };
     return labels[type];
   }
 
-  // Estado para controlar el modo de edición de orden
-  isOrderEditMode = signal(false);
-  hasPendingOrderChanges = signal(false);
-  private pendingOrderUpdates: Array<{id: number, displayOrder: number}> = [];
-
-  /**
-   * Activa el modo de edición de orden
-   */
-  enableOrderEditMode() {
-    this.isOrderEditMode.set(true);
-  }
-
-  /**
-   * Desactiva el modo de edición de orden sin guardar
-   */
-  disableOrderEditMode() {
-    if (this.hasPendingOrderChanges()) {
-      this.cancelOrderChanges();
-    }
-    this.isOrderEditMode.set(false);
-  }
-
   /**
    * Mueve un nodo hacia arriba en el orden
    */
-  moveUp(node: ClassificationTreeNode, siblings: ClassificationTreeNode[], index: number, parent: ClassificationTreeNode | null) {
+  moveUp(node: TypificationTreeNode, siblings: TypificationTreeNode[], index: number, parent: TypificationTreeNode | null) {
     if (index === 0) return; // Ya está al inicio
 
     // Intercambiar posiciones en el array
     [siblings[index - 1], siblings[index]] = [siblings[index], siblings[index - 1]];
 
-    // Marcar que hay cambios pendientes
-    this.markOrderChanges(siblings);
+    // Actualizar displayOrder en el backend
+    this.updateOrder(siblings);
   }
 
   /**
    * Mueve un nodo hacia abajo en el orden
    */
-  moveDown(node: ClassificationTreeNode, siblings: ClassificationTreeNode[], index: number, parent: ClassificationTreeNode | null) {
+  moveDown(node: TypificationTreeNode, siblings: TypificationTreeNode[], index: number, parent: TypificationTreeNode | null) {
     if (index === siblings.length - 1) return; // Ya está al final
 
     // Intercambiar posiciones en el array
     [siblings[index], siblings[index + 1]] = [siblings[index + 1], siblings[index]];
 
-    // Marcar que hay cambios pendientes
-    this.markOrderChanges(siblings);
+    // Actualizar displayOrder en el backend
+    this.updateOrder(siblings);
   }
 
   /**
-   * Marca que hay cambios pendientes y agrega a la lista de updates
+   * Actualiza el orden de los nodos en el backend
    */
-  private markOrderChanges(siblings: ClassificationTreeNode[]) {
-    this.hasPendingOrderChanges.set(true);
+  private updateOrder(siblings: TypificationTreeNode[]) {
+    // Actualizar displayOrder (espaciado de 10 para permitir inserciones futuras)
+    const updates = siblings.map((node, index) => ({
+      id: node.typification.id,
+      displayOrder: index * 10
+    }));
 
-    // Agregar o actualizar los cambios pendientes
-    siblings.forEach((node, index) => {
-      const existingIndex = this.pendingOrderUpdates.findIndex(u => u.id === node.classification.id);
-      const newOrder = index * 10;
-
-      if (existingIndex >= 0) {
-        this.pendingOrderUpdates[existingIndex].displayOrder = newOrder;
-      } else {
-        this.pendingOrderUpdates.push({
-          id: node.classification.id,
-          displayOrder: newOrder
-        });
-      }
-    });
-  }
-
-  /**
-   * Guarda todos los cambios de orden pendientes
-   */
-  saveOrderChanges() {
-    if (this.pendingOrderUpdates.length === 0) return;
-
-    this.classificationService.updateDisplayOrder(this.pendingOrderUpdates).subscribe({
+    // Guardar en el backend
+    this.classificationService.updateDisplayOrder(updates).subscribe({
       next: () => {
         this.showSuccessMessage();
-        this.hasPendingOrderChanges.set(false);
-        this.pendingOrderUpdates = [];
-        this.isOrderEditMode.set(false); // Salir del modo de edición
       },
       error: (error) => {
         console.error('Error al actualizar orden:', error);
         // Recargar para revertir cambios visuales
-        this.loadClassifications();
-        this.hasPendingOrderChanges.set(false);
-        this.pendingOrderUpdates = [];
+        this.loadTypifications();
       }
     });
   }
-
-  /**
-   * Cancela todos los cambios de orden pendientes
-   */
-  cancelOrderChanges() {
-    this.hasPendingOrderChanges.set(false);
-    this.pendingOrderUpdates = [];
-    this.loadClassifications(); // Recargar para revertir cambios visuales
-  }
-
 }

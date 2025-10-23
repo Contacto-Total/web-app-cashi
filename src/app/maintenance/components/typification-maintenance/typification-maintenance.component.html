@@ -143,22 +143,22 @@
 
   <!-- Classification Form Dialog -->
   @if (showClassificationDialog()) {
-    <app-classification-form-dialog
+    <app-typification-form-dialog
       [mode]="classificationDialogMode()"
-      [classification]="selectedClassificationForEdit()"
+      [typification]="selectedClassificationForEdit()"
       [parentClassification]="parentClassificationForCreate()"
       [defaultType]="selectedType"
       [tenantId]="selectedTenantId"
       [portfolioId]="selectedPortfolioId"
       (save)="onClassificationSaved($event)"
       (cancel)="closeClassificationDialog()">
-    </app-classification-form-dialog>
+    </app-typification-form-dialog>
   }
 
   <!-- Category Dialog -->
   @if (showCategoryDialog()) {
     <app-category-form-dialog
-      [classifications]="classifications"
+      [typifications]="typifications"
       (save)="onCategorySaved($event)"
       (cancel)="closeCategoryDialog()">
     </app-category-form-dialog>
@@ -177,7 +177,7 @@
   <!-- Tree View -->
   @if (!loading()) {
     <div class="flex-1 overflow-auto p-2">
-      <div class="classification-tree-container bg-white dark:bg-slate-900 rounded-lg shadow-md p-2 transition-colors duration-300 border border-slate-200 dark:border-slate-800">
+      <div class="typification-tree-container bg-white dark:bg-slate-900 rounded-lg shadow-md p-2 transition-colors duration-300 border border-slate-200 dark:border-slate-800">
         @if (treeNodes.length === 0) {
           <!-- Empty State -->
           <div class="text-center py-20">
@@ -188,7 +188,7 @@
         } @else {
           <!-- Tree Nodes -->
           <div class="space-y-1">
-            @for (node of treeNodes; track node.classification.id; let idx = $index) {
+            @for (node of treeNodes; track node.typification.id; let idx = $index) {
               <ng-container [ngTemplateOutlet]="treeNodeTemplate" [ngTemplateOutletContext]="{node: node, depth: 0, index: idx, siblings: treeNodes, parent: null}"></ng-container>
             }
           </div>
@@ -200,10 +200,10 @@
 
 <!-- Tree Node Template (Recursive) -->
 <ng-template #treeNodeTemplate let-node="node" let-depth="depth" let-index="index" let-siblings="siblings" let-parent="parent">
-  <div class="classification-item-wrapper" [style.margin-left.px]="depth * 16">
+  <div class="typification-item-wrapper" [style.margin-left.px]="depth * 16">
     <!-- Node Content -->
     <div
-      class="classification-item flex items-center justify-between px-2 py-1.5 rounded border-l-3 transition-colors mb-1"
+      class="typification-item flex items-center justify-between px-2 py-1.5 rounded border-l-3 transition-colors mb-1"
       [class.bg-green-50]="node.config?.isEnabled"
       [class.dark:bg-green-950/40]="node.config?.isEnabled"
       [class.hover:bg-green-100]="node.config?.isEnabled"
@@ -243,9 +243,9 @@
         <!-- Expand/Collapse Button -->
         @if (node.children && node.children.length > 0) {
           <button
-            (click)="toggleNode(node.classification.id); $event.stopPropagation()"
+            (click)="toggleNode(node.typification.id); $event.stopPropagation()"
             class="flex-shrink-0 w-5 h-5 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
-            @if (isExpanded(node.classification.id)) {
+            @if (isExpanded(node.typification.id)) {
               <lucide-angular name="chevron-down" [size]="14"></lucide-angular>
             } @else {
               <lucide-angular name="chevron-right" [size]="14"></lucide-angular>
@@ -258,17 +258,17 @@
         <!-- Icon con color de fondo -->
         <div
           class="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-white text-[10px] font-bold"
-          [style.background-color]="node.classification.colorHex || '#6B7280'">
-          {{ node.classification.code?.substring(0, 2) || 'NA' }}
+          [style.background-color]="node.typification.colorHex || '#6B7280'">
+          {{ node.typification.code?.substring(0, 2) || 'NA' }}
         </div>
 
         <!-- Name and Type -->
         <div class="flex-1 min-w-0">
           <div class="font-semibold text-slate-800 dark:text-slate-100 text-xs truncate">
-            {{ node.config?.effectiveName || node.classification.name }}
+            {{ node.config?.effectiveName || node.typification.name }}
           </div>
           <div class="text-[9px] text-slate-500 dark:text-slate-400 truncate">
-            {{ getTypeLabel(node.classification.classificationType) }}
+            {{ getTypeLabel(node.typification.classificationType) }}
           </div>
         </div>
 
@@ -293,32 +293,32 @@
           <input
             type="checkbox"
             [checked]="node.config?.isEnabled === true"
-            (change)="toggleClassification(node, $event); $event.stopPropagation()"
+            (change)="toggleTypification(node, $event); $event.stopPropagation()"
             class="sr-only peer">
           <div class="w-8 h-4 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-green-500"></div>
         </label>
 
         <!-- Action Buttons -->
         <button
-          (click)="openCreateChildDialog(node.classification); $event.stopPropagation()"
+          (click)="openCreateChildDialog(node.typification); $event.stopPropagation()"
           title="Agregar hijo"
           class="w-5 h-5 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
           <lucide-angular name="plus" [size]="12"></lucide-angular>
         </button>
 
         <button
-          (click)="openEditDialog(node.classification); $event.stopPropagation()"
+          (click)="openEditDialog(node.typification); $event.stopPropagation()"
           title="Editar"
           class="w-5 h-5 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors">
           <lucide-angular name="edit" [size]="12"></lucide-angular>
         </button>
 
         <button
-          (click)="deleteClassification(node.classification); $event.stopPropagation()"
+          (click)="deleteTypification(node.typification); $event.stopPropagation()"
           title="Eliminar"
-          [disabled]="node.classification.isSystem"
-          [class.opacity-30]="node.classification.isSystem"
-          [class.cursor-not-allowed]="node.classification.isSystem"
+          [disabled]="node.typification.isSystem"
+          [class.opacity-30]="node.typification.isSystem"
+          [class.cursor-not-allowed]="node.typification.isSystem"
           class="w-5 h-5 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:hover:bg-transparent">
           <lucide-angular name="trash-2" [size]="12"></lucide-angular>
         </button>
@@ -326,9 +326,9 @@
     </div>
 
     <!-- Children Nodes (Recursive) -->
-    @if (isExpanded(node.classification.id) && node.children && node.children.length > 0) {
+    @if (isExpanded(node.typification.id) && node.children && node.children.length > 0) {
       <div class="mt-1 space-y-1">
-        @for (child of node.children; track child.classification.id; let childIdx = $index) {
+        @for (child of node.children; track child.typification.id; let childIdx = $index) {
           <ng-container [ngTemplateOutlet]="treeNodeTemplate" [ngTemplateOutletContext]="{node: child, depth: depth + 1, index: childIdx, siblings: node.children, parent: node}"></ng-container>
         }
       </div>

@@ -15,7 +15,7 @@ import { CustomerData } from '../models/customer.model';
 import { ManagementForm, ValidationErrors } from '../models/management.model';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio } from '../../maintenance/models/portfolio.model';
-import { ClassificationService } from '../../maintenance/services/classification.service';
+import { TypificationService } from '../../maintenance/services/typification.service';
 import { ApiSystemConfigService } from '../services/api-system-config.service';
 import { DynamicFieldRendererComponent } from '../components/dynamic-field-renderer/dynamic-field-renderer.component';
 import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-config.model';
@@ -900,12 +900,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const lastSelectedId = selectedIds[selectedIds.length - 1];
     if (!lastSelectedId) return null;
 
-    const allClassifications = this.managementClassifications();
-    const found = allClassifications.find((c: any) => String(c.id) === String(lastSelectedId));
+    const allTypifications = this.managementClassifications();
+    const found = allTypifications.find((c: any) => String(c.id) === String(lastSelectedId));
 
     // DEBUG: Log para verificar las propiedades
     if (found) {
-      console.log('[DEBUG] Selected classification:', found);
+      console.log('[DEBUG] Selected typification:', found);
       console.log('[DEBUG] suggestsFullAmount:', found.suggestsFullAmount);
       console.log('[DEBUG] allowsInstallmentSelection:', found.allowsInstallmentSelection);
       console.log('[DEBUG] requiresManualAmount:', found.requiresManualAmount);
@@ -1050,7 +1050,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private managementService: ManagementService,
     private paymentScheduleService: PaymentScheduleService,
     public themeService: ThemeService,
-    private classificationService: ClassificationService,
+    private classificationService: TypificationService,
     private apiSystemConfigService: ApiSystemConfigService,
     private customerOutputConfigService: CustomerOutputConfigService
   ) {}
@@ -1081,7 +1081,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     if (this.selectedTenantId) {
       this.loadPortfolios();
-      this.reloadClassifications();
+      this.reloadTypifications();
       this.loadCustomerOutputConfig();
     }
   }
@@ -1100,11 +1100,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   onPortfolioChange() {
-    this.reloadClassifications();
+    this.reloadTypifications();
     this.loadCustomerOutputConfig();
   }
 
-  reloadClassifications() {
+  reloadTypifications() {
     if (!this.selectedTenantId) return;
 
     this.apiSystemConfigService.setTenantAndPortfolio(
@@ -1320,7 +1320,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     return levels.length > 0 && levels[0].length > 0;
   }
 
-  getClassificationsForLevel(levelIndex: number): any[] {
+  getTypificationsForLevel(levelIndex: number): any[] {
     const levels = this.hierarchyLevels();
     return levels[levelIndex] || [];
   }
@@ -1354,9 +1354,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
   }
 
-  private loadDynamicFields(classificationId: number) {
+  private loadDynamicFields(typificationId: number) {
     this.isLoadingDynamicFields.set(true);
-    this.apiSystemConfigService.getClassificationFields(classificationId).subscribe({
+    this.apiSystemConfigService.getClassificationFields(typificationId).subscribe({
       next: (response) => {
         this.isLeafClassification.set(response.isLeaf);
         this.dynamicFields.set(response.fields || []);
@@ -1431,7 +1431,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * and loads active schedules if needed
    */
   private checkAndLoadPaymentSchedules() {
-    // Get the currently selected classification
+    // Get the currently selected typification
     const selected = this.selectedClassifications();
     if (selected.length === 0) {
       this.showScheduleHelper.set(false);
@@ -1439,13 +1439,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
 
     const lastSelectedId = selected[selected.length - 1];
-    const allClassifications = this.managementClassifications();
-    const currentClass = allClassifications.find((c: any) => c.id.toString() === lastSelectedId);
+    const allTypifications = this.managementClassifications();
+    const currentClass = allTypifications.find((c: any) => c.id.toString() === lastSelectedId);
 
     // Check if this typification requires payment (codes: PC, PT, PP, PPT)
     if (currentClass && currentClass.requiere_pago) {
       console.log('[SCHEDULE] Payment typification detected:', currentClass.codigo);
-      console.log('[DEBUG-SCHEDULE] Full classification object:', currentClass);
+      console.log('[DEBUG-SCHEDULE] Full typification object:', currentClass);
       console.log('[DEBUG-SCHEDULE] suggestsFullAmount:', currentClass.suggestsFullAmount);
       console.log('[DEBUG-SCHEDULE] allowsInstallmentSelection:', currentClass.allowsInstallmentSelection);
       console.log('[DEBUG-SCHEDULE] requiresManualAmount:', currentClass.requiresManualAmount);
@@ -1759,7 +1759,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     if (!previousValue) return false;
 
-    const options = this.getClassificationsForLevel(levelIndex);
+    const options = this.getTypificationsForLevel(levelIndex);
     return options.length > 0;
   }
 
@@ -1892,18 +1892,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (this.usesHierarchicalClassifications()) {
       // Sistema jerárquico: obtener clasificación (categoría) y tipificación (hoja)
       const selected = this.selectedClassifications();
-      const allClassifications = this.managementClassifications();
+      const allTypifications = this.managementClassifications();
 
       // TIPIFICACIÓN: La hoja/leaf (última selección)
       const lastSelectedId = selected[selected.length - 1];
-      managementClassification = allClassifications.find((c: any) => c.id.toString() === lastSelectedId);
+      managementClassification = allTypifications.find((c: any) => c.id.toString() === lastSelectedId);
 
       // CLASIFICACIÓN: La categoría padre de la tipificación
       // Si la tipificación tiene parent_id, buscar ese parent como clasificación
       // Si es root (sin parent), usar el mismo como clasificación
       if (managementClassification?.parentId) {
         const parentId = managementClassification.parentId;
-        contactClassification = allClassifications.find((c: any) => c.id.toString() === parentId.toString());
+        contactClassification = allTypifications.find((c: any) => c.id.toString() === parentId.toString());
       } else {
         // Si no tiene padre, usar la misma como clasificación
         contactClassification = managementClassification;
@@ -2078,9 +2078,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // Sistema jerárquico: verificar que se haya seleccionado clasificación hoja
       const selected = this.selectedClassifications();
       if (selected.length === 0 || !selected[selected.length - 1]) {
-        newErrors['classification'] = 'Debe seleccionar una clasificación';
+        newErrors['typification'] = 'Debe seleccionar una clasificación';
       } else if (!this.isLeafClassification()) {
-        newErrors['classification'] = 'Debe completar todos los niveles de clasificación';
+        newErrors['typification'] = 'Debe completar todos los niveles de clasificación';
       }
     } else {
       // Sistema simple: verificar resultado de contacto
@@ -2179,19 +2179,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   getContactClassificationLabel(id: string): string {
-    const classification = this.contactClassifications().find(c => c.id === id);
-    if (!classification) return id;
+    const typification = this.contactClassifications().find(c => c.id === id);
+    if (!typification) return id;
 
-    const label = classification.label || classification.codigo;
-    return `[${classification.codigo}] ${label}`;
+    const label = typification.label || typification.codigo;
+    return `[${typification.codigo}] ${label}`;
   }
 
   getManagementClassificationLabel(id: string): string {
-    const classification = this.managementClassifications().find(g => g.id === id);
-    if (!classification) return id;
+    const typification = this.managementClassifications().find(g => g.id === id);
+    if (!typification) return id;
 
-    const label = classification.label || classification.codigo;
-    return `[${classification.codigo}] ${label}`;
+    const label = typification.label || typification.codigo;
+    return `[${typification.codigo}] ${label}`;
   }
 
   getTableRows(fieldCode: string): any[] {

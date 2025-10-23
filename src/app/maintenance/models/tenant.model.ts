@@ -4,4 +4,5 @@ export interface Tenant {
   tenantName: string;
   businessName: string;
   isActive: boolean;
+  hasPortfolios: boolean;
 }

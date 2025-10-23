@@ -1,0 +1,29 @@
+nombreCabecera,tipoDato,etiquetaVisual,columnaBaseDatos,formato
+numeroDocumento,TEXTO,Número de Documento,texto_01,
+nombreCompleto,TEXTO,Nombre del Cliente,texto_02,
+telefonoMovil,TEXTO,Teléfono Móvil,texto_03,
+correoElectronico,TEXTO,Correo Electrónico,texto_04,
+direccion,TEXTO,Dirección Completa,texto_05,
+distrito,TEXTO,Distrito,texto_06,
+provincia,TEXTO,Provincia,texto_07,
+departamento,TEXTO,Departamento,texto_08,
+numeroCuenta,TEXTO,Número de Cuenta/Contrato,texto_09,
+tipoProducto,TEXTO,Tipo de Producto/Servicio,texto_10,
+estadoCuenta,TEXTO,Estado de Cuenta,texto_11,
+segmento,TEXTO,Segmento,texto_12,
+montoDeuda,NUMERICO,Monto Adeudado (S/.),numero_01,decimal(18,2)
+montoPagado,NUMERICO,Monto Pagado (S/.),numero_02,decimal(18,2)
+saldoPendiente,NUMERICO,Saldo Pendiente (S/.),numero_03,decimal(18,2)
+capitalVencido,NUMERICO,Capital Vencido (S/.),numero_04,decimal(18,2)
+interesesMora,NUMERICO,Intereses de Mora (S/.),numero_05,decimal(18,2)
+gastosCobranza,NUMERICO,Gastos de Cobranza (S/.),numero_06,decimal(18,2)
+diasMora,NUMERICO,Días de Mora,numero_07,
+cuotasMora,NUMERICO,Cuotas en Mora,numero_08,
+cuotaPagar,NUMERICO,Cuota a Pagar (S/.),numero_09,decimal(18,2)
+porcentajeDescuento,NUMERICO,Porcentaje Descuento (%),numero_10,decimal(5,2)
+fechaVencimiento,FECHA,Fecha de Vencimiento,fecha_01,dd/MM/yyyy
+fechaUltimoPago,FECHA,Fecha Último Pago,fecha_02,dd/MM/yyyy
+fechaProximaCuota,FECHA,Fecha Próxima Cuota,fecha_03,dd/MM/yyyy
+fechaDesembolso,FECHA,Fecha de Desembolso,fecha_04,dd/MM/yyyy
+fechaContacto,FECHA,Fecha de Contacto,fecha_05,dd/MM/yyyy
+fechaCompromisoPago,FECHA,Fecha Compromiso de Pago,fecha_06,dd/MM/yyyy

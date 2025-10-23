@@ -2,7 +2,7 @@ import { Component, EventEmitter, Output, signal, OnInit, Input, OnChanges, Simp
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { ClassificationType } from '../../models/classification.model';
+import { ClassificationType } from '../../models/typification.model';
 
 interface CategoryForm {
   code: string;
@@ -207,7 +207,7 @@ interface ClassificationTypeExample {
   `
 })
 export class CategoryFormDialogComponent implements OnInit, OnChanges {
-  @Input() classifications: any[] = [];
+  @Input() typifications: any[] = [];
   @Output() save = new EventEmitter<string>();
   @Output() cancel = new EventEmitter<void>();
 
@@ -226,7 +226,7 @@ export class CategoryFormDialogComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['classifications'] && changes['classifications'].currentValue) {
+    if (changes['typifications'] && changes['typifications'].currentValue) {
       this.buildTypeExamples();
     }
   }
@@ -240,14 +240,14 @@ export class CategoryFormDialogComponent implements OnInit, OnChanges {
     });
 
     // Agrupar clasificaciones existentes por tipo
-    this.classifications.forEach(classification => {
-      const type = classification.classificationType;
+    this.typifications.forEach(typification => {
+      const type = typification.classificationType;
       if (typeMap.has(type)) {
         const typeData = typeMap.get(type)!;
         typeData.count++;
         if (typeData.codes.length < 1) { // Guardar solo 1 ejemplo
-          typeData.codes.push(classification.code);
-          typeData.names.push(classification.name);
+          typeData.codes.push(typification.code);
+          typeData.names.push(typification.name);
         }
       }
     });

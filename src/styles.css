@@ -3,15 +3,45 @@
 @import url('https://fonts.googleapis.com/css2?family=Material+Icons');
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
+/* Variables de tema claro (por defecto) */
+:root:not(.dark) {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #94a3b8;
+  --border-color: #e2e8f0;
+  --nav-bg: #1e293b;
+  --nav-text: #f1f5f9;
+}
+
+/* Variables de tema oscuro */
+:root.dark {
+  --bg-primary: #020617;
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #64748b;
+  --border-color: #334155;
+  --nav-bg: #0f172a;
+  --nav-text: #f1f5f9;
+}
+
 body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: Roboto, "Helvetica Neue", sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 html, body {
   height: 100%;
+  background-color: var(--bg-primary);
 }
 
 * {
