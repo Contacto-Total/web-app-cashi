@@ -1,0 +1,48 @@
+codigoCampo;nombreCabecera;etiquetaVisual;formato;tipoDato;
+fecha_actualizacion_datos;FECHA_PROCESO;Fecha actualización;dd/MM/yyyy HH:mm;FECHA
+codigo_identificacion;IDENTITY_CODE;Código de identificación;;TEXTO;
+numero_cuenta_linea_prestamo;NUM_CUENTA_PMCP;Número cuenta PMCP;;TEXTO
+numero_cuenta_original;NUM_CUENTA_ORI;Número cuenta Original;;TEXTO
+nombre_completo;NOMBRE_CLIENTE;Nombre completo;;TEXTO
+gestor_asignado;GESTOR;Gestor asignado;;TEXTO
+entidad_asignada;ENTIDAD;Entidad asignada;;TEXTO
+flag_linea_prestamo;FLG_LP;FLG LP;;TEXTO
+;NUM_CUENTA_LP;Número cuenta LP;;TEXTO
+fecha_emision;FEC_FACTURACION;Fecha facturación;dd/MM/yyyy HH:mm;FECHA
+fecha_vencimiento;FEC_VENCIMIENTO;Fecha de vencimiento;dd/MM/yyyy HH:mm;FECHA
+dias_mora_inicial;DIAS_MORA_ASIG;Dias de mora inicial;;NUMERICO
+grupo_mora_inicial;RANGO_MORA_ASIG;Grupo de mora inicial;;TEXTO
+monto_capital_inicial;SLD_CAPITAL_ASIG;Saldo capital asignado;decimal(18,2);NUMERICO
+dias_mora;DIAS_MORA;Dias de mora;;NUMERICO
+grupo_mora;RANGO_MORA;Rango mora;;TEXTO
+monto_mora;SLD_MORA;Saldo mora;decimal(18,2);NUMERICO
+estado_contencion;CONTENCION;Estado contencion;;TEXTO
+monto_minimo_pagar;MTO_PAGO_MIN_MES;Monto mínimo a pagar en el mes;decimal(18,2);NUMERICO
+suma_pagos_mes;MTO_PAGO_TOT_MES;Monto total a pagar en el mes;decimal(18,2);NUMERICO
+fecha_ultimo_pago;FEC_ULT_PAGO;Fecha del último pago;dd/MM/yyyy HH:mm;FECHA
+monto_ultimo_pago;MTO_ULT_PAGO;Monto de último pago;decimal(18,2);NUMERICO
+suma_pagos_mes;SUMA_PAGOS_MES;Suma de pagos del mes;decimal(18,2);NUMERICO
+;SLD_ACTUAL_TARJ;Saldo actual tarjeta;decimal(18,2);NUMERICO
+;SLD_ACTUAL_LP;Saldo actual LP;decimal(18,2);NUMERICO
+monto_actual;SLD_ACTUAL_CONS;Saldo actual consolidado;decimal(18,2);NUMERICO
+;SLD_CAP_TARJ;Saldo capital tarjeta;decimal(18,2);NUMERICO
+;SLD_CAP_LP;Saldo capital LP;decimal(18,2);NUMERICO
+monto_capital;SLD_CAP_CONS;Saldo capital consolidado;decimal(18,2);NUMERICO
+promocion_8;LIMPIA_TU_DEUDA;Limpia tu deuda;decimal(18,2);NUMERICO
+promocion_9;PONTE_AL_DIA;Ponte al día;decimal(18,2);NUMERICO
+promocion_10;PAGO_CAPITAL_MORA;Pago capital mora;decimal(18,2);NUMERICO
+promocion_1;BAJA30;Baja 30;decimal(18,2);NUMERICO
+promocion_2;BAJA60;Baja 60;decimal(18,2);NUMERICO
+promocion_3;BAJA90;Baja 90;decimal(18,2);NUMERICO
+probabilidad_pago;PROBABILIDAD;Probabilidad;;TEXTO
+procede_ajuste;AJUSTES;Procede ajuste;;TEXTO
+;FEC_CASTIGO;Fecha castigo;dd/MM/yyyy HH:mm;FECHA
+;PERIODO_CASTIGO;Periodo castigo;dd/MM/yyyy HH:mm;FECHA
+estado_migracion;ESTADO_MIGRACION;Estado migración;;TEXTO
+procede_refinanciacion;PROCEDE_REFI;Procede refinanciacion;;TEXTO
+;LIMPIA_TU_DEUDA_ESPECIAL;Limpia tu deuda especial;;TEXTO
+;SCORE_RECOVERY;Score recovery;;TEXTO
+;PROVISION_PROYECTADA;Provision proyectada;;TEXTO
+;PROVISION_ACTUAL;Provision actual;;TEXTO
+;LIBERACION;Liberacion;;TEXTO
+;NOMBRE;Nombre adicional;;TEXTO

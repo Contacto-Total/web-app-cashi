@@ -9,6 +9,7 @@ export interface CustomerResource {
   fullName: string;
   documentType: string;
   documentNumber: string;
+  accountNumber: string;
   birthDate: string;
   age: number;
   contactInfo: ContactInfoResource;

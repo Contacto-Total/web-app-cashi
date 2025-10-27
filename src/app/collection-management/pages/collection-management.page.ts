@@ -1187,7 +1187,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     // Llamar al endpoint del CustomerController para obtener clientes
     // GET /api/v1/customers?page=0&size=1
-    this.http.get<any>(`${environment.apiUrl}/customers`, {
+    this.http.get<any[]>(`${environment.apiUrl}/customers`, {
       params: {
         page: '0',
         size: '1'
@@ -1195,27 +1195,39 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }).pipe(
       catchError((error) => {
         console.error('Error cargando primer cliente:', error);
-        return of({ content: [] });
+        return of([]);
       })
     ).subscribe({
-      next: (response) => {
-        if (response.content && response.content.length > 0) {
-          const customer = response.content[0];
+      next: (customers) => {
+        // El backend devuelve un array directo, no un objeto paginado
+        if (customers && customers.length > 0) {
+          const customer = customers[0];
           console.log('Primer cliente cargado:', customer);
+
+          // Buscar teléfono principal - puede ser telefono, phone, o PHONE
+          const phoneContact = customer.contactMethods?.find((c: any) =>
+            c.contactType?.toLowerCase() === 'telefono' ||
+            c.contactType?.toLowerCase() === 'phone'
+          );
+
+          // Buscar email
+          const emailContact = customer.contactMethods?.find((c: any) =>
+            c.contactType?.toLowerCase() === 'email'
+          );
 
           // Mapear los datos del cliente al formato del signal
           this.customerData.set({
-            id_cliente: customer.customerId || customer.id?.toString(),
+            id_cliente: customer.customerId || customer.identificationCode || customer.id?.toString(),
             nombre_completo: customer.fullName || '',
             tipo_documento: customer.documentType || 'DNI',
-            numero_documento: customer.document || '',
+            numero_documento: customer.documentNumber || customer.document || '',
             fecha_nacimiento: customer.birthDate || '',
             edad: customer.age || 0,
             contacto: {
-              telefono_principal: customer.contactMethods?.find((c: any) => c.contactType === 'PHONE')?.value || '',
+              telefono_principal: phoneContact?.value || '',
               telefono_alternativo: '',
               telefono_trabajo: '',
-              email: customer.contactMethods?.find((c: any) => c.contactType === 'EMAIL')?.value || '',
+              email: emailContact?.value || '',
               direccion: customer.address || ''
             },
             cuenta: {
@@ -1249,12 +1261,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   private setDefaultOutputFields() {
     this.customerOutputFields.set([
-      { id: 'documentCode', label: 'DNI/Documento', field: 'documentCode', category: 'personal', format: 'text', highlight: true, size: 'medium' },
-      { id: 'fullName', label: 'Nombre Completo', field: 'fullName', category: 'personal', format: 'text', highlight: false, size: 'medium' },
-      { id: 'mobilePhone', label: 'Celular', field: 'contactInfo.mobilePhone', category: 'contact', format: 'text', highlight: false, size: 'medium' },
-      { id: 'currentDebt', label: 'Deuda Actual', field: 'debtInfo.currentDebt', category: 'debt', format: 'currency', highlight: true, size: 'small' },
-      { id: 'daysOverdue', label: 'Días de Mora', field: 'debtInfo.daysOverdue', category: 'debt', format: 'number', highlight: true, size: 'small' },
-      { id: 'accountNumber', label: 'Nro. Cuenta', field: 'accountInfo.accountNumber', category: 'account', format: 'text', highlight: false, size: 'medium' }
+      { id: 'numero_documento', label: 'DNI/Documento', field: 'numero_documento', category: 'personal', format: 'text', highlight: true, size: 'medium' },
+      { id: 'nombre_completo', label: 'Nombre Completo', field: 'nombre_completo', category: 'personal', format: 'text', highlight: false, size: 'full' },
+      { id: 'telefono_principal', label: 'Celular', field: 'contacto.telefono_principal', category: 'contact', format: 'text', highlight: false, size: 'medium' },
+      { id: 'email', label: 'Email', field: 'contacto.email', category: 'contact', format: 'text', highlight: false, size: 'medium' },
+      { id: 'direccion', label: 'Dirección', field: 'contacto.direccion', category: 'contact', format: 'text', highlight: false, size: 'full' },
+      { id: 'edad', label: 'Edad', field: 'edad', category: 'personal', format: 'number', highlight: false, size: 'small' },
+      { id: 'saldo_total', label: 'Deuda Total', field: 'deuda.saldo_total', category: 'debt', format: 'currency', highlight: true, size: 'small' },
+      { id: 'dias_mora', label: 'Días de Mora', field: 'deuda.dias_mora', category: 'debt', format: 'number', highlight: true, size: 'small' },
+      { id: 'numero_cuenta', label: 'Nro. Cuenta', field: 'cuenta.numero_cuenta', category: 'account', format: 'text', highlight: false, size: 'medium' },
+      { id: 'tipo_producto', label: 'Producto', field: 'cuenta.tipo_producto', category: 'account', format: 'text', highlight: false, size: 'medium' }
     ]);
   }
 
