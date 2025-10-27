@@ -108,7 +108,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                   <span>Importar Datos</span>
                   <input
                     type="file"
-                    accept=".xlsx,.xls"
+                    accept=".xlsx,.xls,.csv"
                     (change)="onDataFileSelected($event)"
                     class="hidden">
                 </label>
@@ -157,9 +157,19 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                         <th class="px-3 py-2 text-left font-semibold text-gray-300 border-r border-slate-700 bg-slate-800"
                             style="min-width: 150px;"
                             [title]="header.dataType + (header.format ? ' (' + header.format + ')' : '')">
-                          <div class="flex flex-col gap-0.5">
-                            <span class="font-semibold">{{ header.headerName }}</span>
-                            <span class="text-[10px] text-green-400 font-normal">{{ header.dataType }}{{ header.format ? ' (' + header.format + ')' : '' }}</span>
+                          <div class="flex items-center gap-1.5">
+                            @if (header.sourceField && header.regexPattern) {
+                              <lucide-angular
+                                name="sparkles"
+                                [size]="12"
+                                class="text-amber-400 flex-shrink-0"
+                                [title]="'Campo transformado desde: ' + header.sourceField">
+                              </lucide-angular>
+                            }
+                            <div class="flex flex-col gap-0.5">
+                              <span class="font-semibold">{{ header.headerName }}</span>
+                              <span class="text-[10px] text-green-400 font-normal">{{ header.dataType }}{{ header.format ? ' (' + header.format + ')' : '' }}</span>
+                            </div>
                           </div>
                         </th>
                       }
@@ -223,6 +233,28 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
             <!-- Mensaje de error para datos inválidos y botones de acción -->
             @if (importedData().length > 0) {
               <div class="space-y-4 mt-4">
+                <!-- Error Display Section - Backend Errors -->
+                @if (backendErrors().length > 0) {
+                  <div class="bg-red-900/30 border-2 border-red-700 rounded-xl p-4">
+                    <div class="flex items-start gap-3">
+                      <lucide-angular name="x-circle" [size]="24" class="text-red-500 flex-shrink-0 mt-1"></lucide-angular>
+                      <div class="flex-1">
+                        <h3 class="text-red-500 font-bold text-lg mb-2">Errores al Importar Datos</h3>
+                        <p class="text-red-300 text-sm mb-3">
+                          La importación falló debido a los siguientes errores. No se insertó ningún dato.
+                        </p>
+                        <div class="bg-red-950/50 rounded-lg p-3 max-h-60 overflow-y-auto">
+                          @for (error of backendErrors(); track $index) {
+                            <div class="text-red-200 text-xs font-mono mb-2 pb-2 border-b border-red-800/50 last:border-0">
+                              {{ error }}
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+
                 @if (invalidData().length > 0) {
                   <div class="bg-red-900/20 border border-red-700/50 rounded-lg p-4">
                     <div class="flex items-start gap-3">
@@ -244,7 +276,9 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                 <!-- Botones de acción -->
                 <div class="flex justify-between items-center">
                   <div class="text-sm text-gray-400">
-                    @if (validData().length > 0) {
+                    @if (backendErrors().length > 0) {
+                      <span class="text-red-400">La importación falló. Corrija los errores e intente nuevamente.</span>
+                    } @else if (validData().length > 0) {
                       <span class="text-green-400">{{ validData().length }} registro(s)</span> listo(s) para importar
                     } @else {
                       <span class="text-red-400">No hay registros válidos para importar</span>
@@ -256,7 +290,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                       class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-all font-medium text-sm">
                       Cancelar
                     </button>
-                    @if (validData().length > 0) {
+                    @if (validData().length > 0 && backendErrors().length === 0) {
                       <button
                         (click)="confirmImport()"
                         class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium text-sm">
@@ -306,6 +340,7 @@ export class DailyLoadComponent implements OnInit {
   importedData = signal<any[]>([]);
   validData = signal<any[]>([]);
   invalidData = signal<{error: string, data: any}[]>([]);
+  backendErrors = signal<string[]>([]);
 
   constructor(
     private tenantService: TenantService,
@@ -426,6 +461,17 @@ export class DailyLoadComponent implements OnInit {
     const file = event.target.files[0];
     if (!file) return;
 
+    const fileName = file.name.toLowerCase();
+    const isCSV = fileName.endsWith('.csv');
+
+    // Para archivos CSV, usar parseo directo sin XLSX
+    if (isCSV) {
+      this.parseCSVFile(file);
+      event.target.value = '';
+      return;
+    }
+
+    // Para archivos Excel (.xlsx, .xls)
     const XLSX = (window as any).XLSX;
     const reader = new FileReader();
 
@@ -454,7 +500,11 @@ export class DailyLoadComponent implements OnInit {
           if (excelIndex !== -1) {
             columnMapping[excelIndex] = configIndex;
           } else {
-            missingHeaders.push(header);
+            // Solo considerar como faltante si NO es un campo transformado
+            // Los campos transformados (con sourceField y regexPattern) se generan automáticamente
+            if (!(header.sourceField && header.regexPattern)) {
+              missingHeaders.push(header);
+            }
           }
         });
 
@@ -516,6 +566,38 @@ export class DailyLoadComponent implements OnInit {
             }
           });
 
+          // Aplicar transformaciones regex (segunda pasada)
+          configuredHeaders.forEach((header) => {
+            // Si este campo tiene transformación regex configurada
+            if (header.sourceField && header.regexPattern) {
+              try {
+                // Obtener el valor del campo origen
+                const sourceValue = transformedRow[header.sourceField];
+
+                if (sourceValue) {
+                  // Aplicar el regex
+                  const regex = new RegExp(header.regexPattern);
+                  const match = String(sourceValue).match(regex);
+
+                  if (match) {
+                    // Si hay grupos de captura, usar el primer grupo
+                    // Si no hay grupos, usar el match completo
+                    transformedRow[header.headerName] = match[1] || match[0];
+                  } else {
+                    // Si no coincide el regex, dejar null
+                    transformedRow[header.headerName] = null;
+                  }
+                } else {
+                  // Si el campo origen está vacío/null, el transformado también
+                  transformedRow[header.headerName] = null;
+                }
+              } catch (error) {
+                console.error(`Error aplicando regex en ${header.headerName}:`, error);
+                transformedRow[header.headerName] = null;
+              }
+            }
+          });
+
           // Validar que la fila tenga al menos un valor no nulo
           const hasData = Object.values(transformedRow).some(v => v !== null && v !== '');
 
@@ -555,24 +637,350 @@ export class DailyLoadComponent implements OnInit {
     event.target.value = '';
   }
 
+  parseCSVFile(file: File) {
+    const reader = new FileReader();
+
+    reader.onload = (e: any) => {
+      try {
+        const text = e.target.result;
+        const lines = text.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+
+        if (lines.length === 0) {
+          alert('El archivo CSV está vacío');
+          return;
+        }
+
+        // Detectar separador (prioridad: punto y coma, coma, pipe, tab)
+        const firstLine = lines[0];
+        let separator = ';';
+        if (firstLine.includes(';')) {
+          separator = ';';
+        } else if (firstLine.includes(',')) {
+          separator = ',';
+        } else if (firstLine.includes('|')) {
+          separator = '|';
+        } else if (firstLine.includes('\t')) {
+          separator = '\t';
+        }
+
+        // Parsear cabeceras
+        const csvHeaders = lines[0].split(separator).map((h: string) => h.trim().toLowerCase());
+        const configuredHeaders = this.previewHeaders();
+        const columnMapping: { [csvIndex: number]: number } = {};
+        const missingHeaders: HeaderConfiguration[] = [];
+
+        configuredHeaders.forEach((header, configIndex) => {
+          const csvIndex = csvHeaders.findIndex(
+            (csvH: string) => csvH === header.headerName.toLowerCase()
+          );
+
+          if (csvIndex !== -1) {
+            columnMapping[csvIndex] = configIndex;
+          } else {
+            // Solo considerar como faltante si NO es un campo transformado
+            // Los campos transformados (con sourceField y regexPattern) se generan automáticamente
+            if (!(header.sourceField && header.regexPattern)) {
+              missingHeaders.push(header);
+            }
+          }
+        });
+
+        if (missingHeaders.length > 0) {
+          const missingNames = missingHeaders.map(h => h.headerName).join(', ');
+          const continuar = confirm(
+            `⚠️ ADVERTENCIA: Faltan las siguientes columnas en el archivo CSV:\n\n${missingNames}\n\n` +
+            `Estas columnas se guardarán como NULL.\n\n¿Desea continuar con la importación?`
+          );
+          if (!continuar) {
+            return;
+          }
+        }
+
+        const dataLines = lines.slice(1);
+
+        if (dataLines.length === 0) {
+          alert('El archivo CSV no contiene datos (solo cabeceras)');
+          return;
+        }
+
+        const valid: any[] = [];
+        const invalid: {error: string, data: any}[] = [];
+
+        dataLines.forEach((line: string, lineIndex: number) => {
+          const values = line.split(separator).map((v: string) => v.trim());
+          const transformedRow: any = {};
+          let rowError = '';
+
+          configuredHeaders.forEach((header, configIndex) => {
+            const csvColumnIndex = Object.keys(columnMapping).find(
+              key => columnMapping[parseInt(key)] === configIndex
+            );
+
+            if (csvColumnIndex !== undefined) {
+              const value = values[parseInt(csvColumnIndex)];
+              if (value !== undefined && value !== null && value !== '') {
+                try {
+                  if (header.dataType === 'FECHA') {
+                    // Intentar parsear la fecha desde el string CSV
+                    const dateValue = this.parseCSVDate(value, header.format || 'dd/MM/yyyy');
+                    if (dateValue) {
+                      transformedRow[header.headerName] = dateValue;
+                    } else {
+                      rowError = `Valor no es fecha válida para campo ${header.headerName}: ${value} (formato esperado: ${header.format || 'dd/MM/yyyy'})`;
+                      transformedRow[header.headerName] = value;
+                    }
+                  } else {
+                    transformedRow[header.headerName] = value;
+                  }
+                } catch (error) {
+                  rowError = `Error procesando columna ${header.headerName}: ${error}`;
+                  transformedRow[header.headerName] = value;
+                }
+              } else {
+                transformedRow[header.headerName] = null;
+              }
+            } else {
+              transformedRow[header.headerName] = null;
+            }
+          });
+
+          // Aplicar transformaciones regex (segunda pasada)
+          configuredHeaders.forEach((header) => {
+            // Si este campo tiene transformación regex configurada
+            if (header.sourceField && header.regexPattern) {
+              try {
+                // Obtener el valor del campo origen
+                const sourceValue = transformedRow[header.sourceField];
+
+                if (sourceValue) {
+                  // Aplicar el regex
+                  const regex = new RegExp(header.regexPattern);
+                  const match = String(sourceValue).match(regex);
+
+                  if (match) {
+                    // Si hay grupos de captura, usar el primer grupo
+                    // Si no hay grupos, usar el match completo
+                    transformedRow[header.headerName] = match[1] || match[0];
+                  } else {
+                    // Si no coincide el regex, dejar null
+                    transformedRow[header.headerName] = null;
+                  }
+                } else {
+                  // Si el campo origen está vacío/null, el transformado también
+                  transformedRow[header.headerName] = null;
+                }
+              } catch (error) {
+                console.error(`Error aplicando regex en ${header.headerName}:`, error);
+                transformedRow[header.headerName] = null;
+              }
+            }
+          });
+
+          // Validar que la fila tenga al menos un valor no nulo
+          const hasData = Object.values(transformedRow).some(v => v !== null && v !== '');
+
+          if (!hasData) {
+            invalid.push({
+              error: 'Fila vacía - no contiene datos',
+              data: transformedRow
+            });
+          } else if (rowError) {
+            invalid.push({
+              error: rowError,
+              data: transformedRow
+            });
+          } else {
+            valid.push(transformedRow);
+          }
+        });
+
+        // Actualizar los signals para mostrar la previsualización
+        this.importedData.set([...valid, ...invalid.map(i => i.data)]);
+        this.validData.set(valid);
+        this.invalidData.set(invalid);
+
+        console.log('Previsualización de datos CSV:', {
+          total: dataLines.length,
+          válidos: valid.length,
+          inválidos: invalid.length
+        });
+
+      } catch (error) {
+        console.error('Error procesando el archivo CSV:', error);
+        alert('Error al procesar el archivo CSV');
+      }
+    };
+
+    reader.readAsText(file);
+  }
+
+  parseCSVDate(value: string, format: string): string | null {
+    // Intentar parsear según el formato configurado
+    try {
+      // Si el valor ya viene en el formato correcto, devolverlo
+      const formatRegex = format
+        .replace(/dd/g, '\\d{2}')
+        .replace(/MM/g, '\\d{2}')
+        .replace(/yyyy/g, '\\d{4}')
+        .replace(/yy/g, '\\d{2}')
+        .replace(/HH/g, '\\d{2}')
+        .replace(/mm/g, '\\d{2}')
+        .replace(/ss/g, '\\d{2}');
+
+      const regex = new RegExp('^' + formatRegex + '$');
+
+      if (regex.test(value.trim())) {
+        return value.trim();
+      }
+
+      // Si no coincide, intentar parsear y reformatear
+      // Detectar separadores comunes
+      const dateParts = value.split(/[-\/\s:]/);
+
+      if (dateParts.length < 3) {
+        return null;
+      }
+
+      // Intentar diferentes formatos comunes
+      let day: number, month: number, year: number;
+      let hours = 0, minutes = 0, seconds = 0;
+
+      // Formato dd/MM/yyyy o dd-MM-yyyy
+      if (format.startsWith('dd')) {
+        day = parseInt(dateParts[0]);
+        month = parseInt(dateParts[1]);
+        year = parseInt(dateParts[2]);
+      }
+      // Formato MM/dd/yyyy o MM-dd-yyyy
+      else if (format.startsWith('MM')) {
+        month = parseInt(dateParts[0]);
+        day = parseInt(dateParts[1]);
+        year = parseInt(dateParts[2]);
+      }
+      // Formato yyyy/MM/dd o yyyy-MM-dd
+      else {
+        year = parseInt(dateParts[0]);
+        month = parseInt(dateParts[1]);
+        day = parseInt(dateParts[2]);
+      }
+
+      // Parsear tiempo si existe
+      if (dateParts.length > 3) {
+        hours = parseInt(dateParts[3]) || 0;
+        minutes = parseInt(dateParts[4]) || 0;
+        seconds = parseInt(dateParts[5]) || 0;
+      }
+
+      // Validar valores
+      if (isNaN(day) || isNaN(month) || isNaN(year) ||
+          day < 1 || day > 31 || month < 1 || month > 12 || year < 1900) {
+        return null;
+      }
+
+      // Crear fecha y formatear según el patrón
+      const date = new Date(year, month - 1, day, hours, minutes, seconds);
+
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+
+      return this.formatDateByPattern(date, format);
+
+    } catch (error) {
+      console.error('Error parseando fecha:', error);
+      return null;
+    }
+  }
+
   formatDateByPattern(date: Date, pattern: string): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
 
     let formatted = pattern;
     formatted = formatted.replace(/yyyy/g, String(year));
     formatted = formatted.replace(/yy/g, String(year).slice(-2));
     formatted = formatted.replace(/MM/g, month);
     formatted = formatted.replace(/dd/g, day);
+    formatted = formatted.replace(/HH/g, hours);
+    formatted = formatted.replace(/mm/g, minutes);
+    formatted = formatted.replace(/ss/g, seconds);
 
     return formatted;
+  }
+
+  simplifyBackendError(error: string): string {
+    // Extraer número de fila
+    const rowMatch = error.match(/Fila (\d+):/);
+    const rowNumber = rowMatch ? rowMatch[1] : '?';
+
+    // Detectar diferentes tipos de errores y simplificarlos
+
+    // Error: Campo no tiene valor por defecto (campo vacío obligatorio)
+    if (error.includes("doesn't have a default value")) {
+      const fieldMatch = error.match(/Field '([^']+)'/);
+      const fieldName = fieldMatch ? fieldMatch[1] : 'desconocido';
+      return `Fila ${rowNumber}: El campo '${fieldName}' está vacío pero es obligatorio. Por favor, proporcione un valor.`;
+    }
+
+    // Error: Valor NULL no permitido
+    if (error.includes("cannot be null") || error.includes("Column") && error.includes("cannot be null")) {
+      const fieldMatch = error.match(/Column '([^']+)'/) || error.match(/Field '([^']+)'/);
+      const fieldName = fieldMatch ? fieldMatch[1] : 'desconocido';
+      return `Fila ${rowNumber}: El campo '${fieldName}' no puede estar vacío. Es un campo obligatorio.`;
+    }
+
+    // Error: Dato muy largo
+    if (error.includes("Data too long") || error.includes("too long for column")) {
+      const fieldMatch = error.match(/column '([^']+)'/) || error.match(/Field '([^']+)'/);
+      const fieldName = fieldMatch ? fieldMatch[1] : 'desconocido';
+      return `Fila ${rowNumber}: El valor del campo '${fieldName}' es demasiado largo. Reduzca el tamaño del texto.`;
+    }
+
+    // Error: Formato de fecha incorrecto
+    if (error.includes("Incorrect date") || error.includes("Incorrect datetime")) {
+      const fieldMatch = error.match(/column '([^']+)'/) || error.match(/Field '([^']+)'/);
+      const fieldName = fieldMatch ? fieldMatch[1] : 'desconocido';
+      return `Fila ${rowNumber}: El campo '${fieldName}' tiene un formato de fecha incorrecto. Verifique el formato.`;
+    }
+
+    // Error: Valor duplicado (clave única)
+    if (error.includes("Duplicate entry")) {
+      const valueMatch = error.match(/Duplicate entry '([^']+)'/);
+      const value = valueMatch ? valueMatch[1] : 'desconocido';
+      return `Fila ${rowNumber}: El valor '${value}' ya existe en la base de datos. No se permiten duplicados.`;
+    }
+
+    // Error: Tipo de dato incorrecto
+    if (error.includes("Incorrect integer") || error.includes("Incorrect decimal")) {
+      const fieldMatch = error.match(/column '([^']+)'/) || error.match(/Field '([^']+)'/);
+      const fieldName = fieldMatch ? fieldMatch[1] : 'desconocido';
+      return `Fila ${rowNumber}: El campo '${fieldName}' debe contener un número válido.`;
+    }
+
+    // Error: Referencia foránea no existe
+    if (error.includes("foreign key constraint fails") || error.includes("Cannot add or update a child row")) {
+      return `Fila ${rowNumber}: Hay una referencia a un dato que no existe en el sistema. Verifique los datos relacionados.`;
+    }
+
+    // Si no se puede simplificar, extraer solo la parte más relevante
+    const simplifiedMatch = error.match(/Fila \d+: Error al insertar datos: (.+?)(?:\s*;|$)/);
+    if (simplifiedMatch) {
+      return `Fila ${rowNumber}: ${simplifiedMatch[1]}`;
+    }
+
+    // Si todo falla, retornar el error original pero más corto
+    return error.length > 200 ? error.substring(0, 200) + '...' : error;
   }
 
   clearImportedData() {
     this.importedData.set([]);
     this.validData.set([]);
     this.invalidData.set([]);
+    this.backendErrors.set([]);
   }
 
   confirmImport() {
@@ -588,14 +996,33 @@ export class DailyLoadComponent implements OnInit {
 
     // Daily load usa ACTUALIZACION
     this.headerConfigService.importData(this.selectedSubPortfolioId, 'ACTUALIZACION', dataToImport).subscribe({
-      next: (response) => {
+      next: (response: any) => {
         console.log('Respuesta del servidor:', response);
-        alert(`✅ Se importaron ${dataToImport.length} filas de datos exitosamente a la tabla dinámica.`);
-        this.clearImportedData();
+
+        // Verificar si hay errores en la respuesta del backend
+        if (response.errors && response.errors.length > 0) {
+          // Simplificar los errores para que sean más entendibles
+          const simplifiedErrors = response.errors.map((error: string) => this.simplifyBackendError(error));
+          this.backendErrors.set(simplifiedErrors);
+          console.error('Errores del backend:', response.errors);
+          // No limpiar los datos importados para que el usuario pueda ver qué falló
+        } else {
+          // Solo si no hay errores, mostrar mensaje de éxito y limpiar
+          alert(`✅ Se importaron ${response.insertedRows || dataToImport.length} filas de datos exitosamente a la tabla dinámica.`);
+          this.clearImportedData();
+        }
       },
       error: (error) => {
-        console.error('Error al importar datos:', error);
-        alert(`❌ Error al importar datos: ${error.error?.message || error.message}\n\nRevise la consola para más detalles.`);
+        console.error('Error HTTP al importar datos:', error);
+
+        // Si el error tiene estructura de errores del backend, mostrarlos
+        if (error.error?.errors && Array.isArray(error.error.errors)) {
+          const simplifiedErrors = error.error.errors.map((err: string) => this.simplifyBackendError(err));
+          this.backendErrors.set(simplifiedErrors);
+        } else {
+          // Error genérico
+          this.backendErrors.set([`Error de conexión: ${error.error?.message || error.message}`]);
+        }
       }
     });
   }

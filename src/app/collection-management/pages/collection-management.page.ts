@@ -1,10 +1,13 @@
 import { Component, OnInit, OnDestroy, signal, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import {
   LucideAngularModule,
 } from 'lucide-angular';
 import { catchError, of } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 import { SystemConfigService } from '../services/system-config.service';
 import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest } from '../services/management.service';
@@ -1052,7 +1055,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     public themeService: ThemeService,
     private classificationService: TypificationService,
     private apiSystemConfigService: ApiSystemConfigService,
-    private customerOutputConfigService: CustomerOutputConfigService
+    private customerOutputConfigService: CustomerOutputConfigService,
+    private router: Router,
+    private http: HttpClient
   ) {}
 
   ngOnInit() {
@@ -1083,6 +1088,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.loadPortfolios();
       this.reloadTypifications();
       this.loadCustomerOutputConfig();
+      this.loadFirstCustomer(); // Cargar el primer cliente del tenant
     }
   }
 
@@ -1129,6 +1135,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   loadCustomerOutputConfig() {
     if (!this.selectedTenantId) return;
 
+    // TEMPORAL: El endpoint customer-outputs/config no existe aún
+    // Usar directamente los campos por defecto
+    console.log('[TEMPORAL] loadCustomerOutputConfig - endpoint no existe, usando campos por defecto');
+    this.setDefaultOutputFields();
+    return;
+
+    /* COMENTADO TEMPORALMENTE - endpoint no existe
     this.customerOutputConfigService.getConfiguration(this.selectedTenantId, this.selectedPortfolioId)
       .pipe(
         catchError((error) => {
@@ -1163,6 +1176,72 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           }
         }
       });
+    */
+  }
+
+  /**
+   * Carga el primer cliente disponible de la base de datos
+   */
+  loadFirstCustomer() {
+    if (!this.selectedTenantId) return;
+
+    // Llamar al endpoint del CustomerController para obtener clientes
+    // GET /api/v1/customers?page=0&size=1
+    this.http.get<any>(`${environment.apiUrl}/customers`, {
+      params: {
+        page: '0',
+        size: '1'
+      }
+    }).pipe(
+      catchError((error) => {
+        console.error('Error cargando primer cliente:', error);
+        return of({ content: [] });
+      })
+    ).subscribe({
+      next: (response) => {
+        if (response.content && response.content.length > 0) {
+          const customer = response.content[0];
+          console.log('Primer cliente cargado:', customer);
+
+          // Mapear los datos del cliente al formato del signal
+          this.customerData.set({
+            id_cliente: customer.customerId || customer.id?.toString(),
+            nombre_completo: customer.fullName || '',
+            tipo_documento: customer.documentType || 'DNI',
+            numero_documento: customer.document || '',
+            fecha_nacimiento: customer.birthDate || '',
+            edad: customer.age || 0,
+            contacto: {
+              telefono_principal: customer.contactMethods?.find((c: any) => c.contactType === 'PHONE')?.value || '',
+              telefono_alternativo: '',
+              telefono_trabajo: '',
+              email: customer.contactMethods?.find((c: any) => c.contactType === 'EMAIL')?.value || '',
+              direccion: customer.address || ''
+            },
+            cuenta: {
+              numero_cuenta: '',
+              tipo_producto: customer.subPortfolioName || '',
+              fecha_desembolso: '',
+              monto_original: 0,
+              plazo_meses: 0,
+              tasa_interes: 0
+            },
+            deuda: {
+              saldo_capital: 0,
+              intereses_vencidos: 0,
+              mora_acumulada: 0,
+              gastos_cobranza: 0,
+              saldo_total: 0,
+              dias_mora: 0,
+              fecha_ultimo_pago: '',
+              monto_ultimo_pago: 0
+            }
+          });
+        } else {
+          console.log('No se encontraron clientes en la base de datos');
+        }
+      }
+    });
   }
 
   /**
@@ -2067,7 +2146,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     this.activeTab.set('historial');
 
-    setTimeout(() => this.showSuccess.set(false), 3000);
+    // Ocultar mensaje de éxito y redirigir al webphone
+    setTimeout(() => {
+      this.showSuccess.set(false);
+      this.router.navigate(['/webphone']);
+    }, 3000);
   }
 
   private validateForm(): boolean {

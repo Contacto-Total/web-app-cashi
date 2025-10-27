@@ -157,9 +157,19 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                         <th class="px-3 py-2 text-left font-semibold text-gray-300 border-r border-slate-700 bg-slate-800"
                             style="min-width: 150px;"
                             [title]="header.dataType + (header.format ? ' (' + header.format + ')' : '')">
-                          <div class="flex flex-col gap-0.5">
-                            <span class="font-semibold">{{ header.headerName }}</span>
-                            <span class="text-[10px] text-blue-400 font-normal">{{ header.dataType }}{{ header.format ? ' (' + header.format + ')' : '' }}</span>
+                          <div class="flex items-center gap-1.5">
+                            @if (header.sourceField && header.regexPattern) {
+                              <lucide-angular
+                                name="sparkles"
+                                [size]="12"
+                                class="text-amber-400 flex-shrink-0"
+                                [title]="'Campo transformado desde: ' + header.sourceField">
+                              </lucide-angular>
+                            }
+                            <div class="flex flex-col gap-0.5">
+                              <span class="font-semibold">{{ header.headerName }}</span>
+                              <span class="text-[10px] text-blue-400 font-normal">{{ header.dataType }}{{ header.format ? ' (' + header.format + ')' : '' }}</span>
+                            </div>
                           </div>
                         </th>
                       }
@@ -223,6 +233,28 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
             <!-- Mensaje de error para datos inválidos y botones de acción -->
             @if (importedData().length > 0) {
               <div class="space-y-4 mt-4">
+                <!-- Error Display Section - Backend Errors -->
+                @if (backendErrors().length > 0) {
+                  <div class="bg-red-900/30 border-2 border-red-700 rounded-xl p-4">
+                    <div class="flex items-start gap-3">
+                      <lucide-angular name="x-circle" [size]="24" class="text-red-500 flex-shrink-0 mt-1"></lucide-angular>
+                      <div class="flex-1">
+                        <h3 class="text-red-500 font-bold text-lg mb-2">Errores al Importar Datos</h3>
+                        <p class="text-red-300 text-sm mb-3">
+                          La importación falló debido a los siguientes errores. No se insertó ningún dato.
+                        </p>
+                        <div class="bg-red-950/50 rounded-lg p-3 max-h-60 overflow-y-auto">
+                          @for (error of backendErrors(); track $index) {
+                            <div class="text-red-200 text-xs font-mono mb-2 pb-2 border-b border-red-800/50 last:border-0">
+                              {{ error }}
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+
                 @if (invalidData().length > 0) {
                   <div class="bg-red-900/20 border border-red-700/50 rounded-lg p-4">
                     <div class="flex items-start gap-3">
@@ -244,7 +276,9 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                 <!-- Botones de acción -->
                 <div class="flex justify-between items-center">
                   <div class="text-sm text-gray-400">
-                    @if (validData().length > 0) {
+                    @if (backendErrors().length > 0) {
+                      <span class="text-red-400">La importación falló. Corrija los errores e intente nuevamente.</span>
+                    } @else if (validData().length > 0) {
                       <span class="text-green-400">{{ validData().length }} registro(s)</span> listo(s) para importar
                     } @else {
                       <span class="text-red-400">No hay registros válidos para importar</span>
@@ -256,7 +290,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                       class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-all font-medium text-sm">
                       Cancelar
                     </button>
-                    @if (validData().length > 0) {
+                    @if (validData().length > 0 && backendErrors().length === 0) {
                       <button
                         (click)="confirmImport()"
                         class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium text-sm">
@@ -306,6 +340,7 @@ export class InitialLoadComponent implements OnInit {
   importedData = signal<any[]>([]);
   validData = signal<any[]>([]);
   invalidData = signal<{error: string, data: any}[]>([]);
+  backendErrors = signal<string[]>([]);
 
   constructor(
     private tenantService: TenantService,
@@ -454,7 +489,11 @@ export class InitialLoadComponent implements OnInit {
           if (excelIndex !== -1) {
             columnMapping[excelIndex] = configIndex;
           } else {
-            missingHeaders.push(header);
+            // Solo considerar como faltante si NO es un campo transformado
+            // Los campos transformados (con sourceField y regexPattern) se generan automáticamente
+            if (!(header.sourceField && header.regexPattern)) {
+              missingHeaders.push(header);
+            }
           }
         });
 
@@ -516,6 +555,38 @@ export class InitialLoadComponent implements OnInit {
             }
           });
 
+          // Aplicar transformaciones regex (segunda pasada)
+          configuredHeaders.forEach((header) => {
+            // Si este campo tiene transformación regex configurada
+            if (header.sourceField && header.regexPattern) {
+              try {
+                // Obtener el valor del campo origen
+                const sourceValue = transformedRow[header.sourceField];
+
+                if (sourceValue) {
+                  // Aplicar el regex
+                  const regex = new RegExp(header.regexPattern);
+                  const match = String(sourceValue).match(regex);
+
+                  if (match) {
+                    // Si hay grupos de captura, usar el primer grupo
+                    // Si no hay grupos, usar el match completo
+                    transformedRow[header.headerName] = match[1] || match[0];
+                  } else {
+                    // Si no coincide el regex, dejar null
+                    transformedRow[header.headerName] = null;
+                  }
+                } else {
+                  // Si el campo origen está vacío/null, el transformado también
+                  transformedRow[header.headerName] = null;
+                }
+              } catch (error) {
+                console.error(`Error aplicando regex en ${header.headerName}:`, error);
+                transformedRow[header.headerName] = null;
+              }
+            }
+          });
+
           // Validar que la fila tenga al menos un valor no nulo
           const hasData = Object.values(transformedRow).some(v => v !== null && v !== '');
 
@@ -559,20 +630,91 @@ export class InitialLoadComponent implements OnInit {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
 
     let formatted = pattern;
     formatted = formatted.replace(/yyyy/g, String(year));
     formatted = formatted.replace(/yy/g, String(year).slice(-2));
     formatted = formatted.replace(/MM/g, month);
     formatted = formatted.replace(/dd/g, day);
+    formatted = formatted.replace(/HH/g, hours);
+    formatted = formatted.replace(/mm/g, minutes);
+    formatted = formatted.replace(/ss/g, seconds);
 
     return formatted;
+  }
+
+  simplifyBackendError(error: string): string {
+    // Extraer número de fila
+    const rowMatch = error.match(/Fila (\d+):/);
+    const rowNumber = rowMatch ? rowMatch[1] : '?';
+
+    // Detectar diferentes tipos de errores y simplificarlos
+
+    // Error: Campo no tiene valor por defecto (campo vacío obligatorio)
+    if (error.includes("doesn't have a default value")) {
+      const fieldMatch = error.match(/Field '([^']+)'/);
+      const fieldName = fieldMatch ? fieldMatch[1] : 'desconocido';
+      return `Fila ${rowNumber}: El campo '${fieldName}' está vacío pero es obligatorio. Por favor, proporcione un valor.`;
+    }
+
+    // Error: Valor NULL no permitido
+    if (error.includes("cannot be null") || error.includes("Column") && error.includes("cannot be null")) {
+      const fieldMatch = error.match(/Column '([^']+)'/) || error.match(/Field '([^']+)'/);
+      const fieldName = fieldMatch ? fieldMatch[1] : 'desconocido';
+      return `Fila ${rowNumber}: El campo '${fieldName}' no puede estar vacío. Es un campo obligatorio.`;
+    }
+
+    // Error: Dato muy largo
+    if (error.includes("Data too long") || error.includes("too long for column")) {
+      const fieldMatch = error.match(/column '([^']+)'/) || error.match(/Field '([^']+)'/);
+      const fieldName = fieldMatch ? fieldMatch[1] : 'desconocido';
+      return `Fila ${rowNumber}: El valor del campo '${fieldName}' es demasiado largo. Reduzca el tamaño del texto.`;
+    }
+
+    // Error: Formato de fecha incorrecto
+    if (error.includes("Incorrect date") || error.includes("Incorrect datetime")) {
+      const fieldMatch = error.match(/column '([^']+)'/) || error.match(/Field '([^']+)'/);
+      const fieldName = fieldMatch ? fieldMatch[1] : 'desconocido';
+      return `Fila ${rowNumber}: El campo '${fieldName}' tiene un formato de fecha incorrecto. Verifique el formato.`;
+    }
+
+    // Error: Valor duplicado (clave única)
+    if (error.includes("Duplicate entry")) {
+      const valueMatch = error.match(/Duplicate entry '([^']+)'/);
+      const value = valueMatch ? valueMatch[1] : 'desconocido';
+      return `Fila ${rowNumber}: El valor '${value}' ya existe en la base de datos. No se permiten duplicados.`;
+    }
+
+    // Error: Tipo de dato incorrecto
+    if (error.includes("Incorrect integer") || error.includes("Incorrect decimal")) {
+      const fieldMatch = error.match(/column '([^']+)'/) || error.match(/Field '([^']+)'/);
+      const fieldName = fieldMatch ? fieldMatch[1] : 'desconocido';
+      return `Fila ${rowNumber}: El campo '${fieldName}' debe contener un número válido.`;
+    }
+
+    // Error: Referencia foránea no existe
+    if (error.includes("foreign key constraint fails") || error.includes("Cannot add or update a child row")) {
+      return `Fila ${rowNumber}: Hay una referencia a un dato que no existe en el sistema. Verifique los datos relacionados.`;
+    }
+
+    // Si no se puede simplificar, extraer solo la parte más relevante
+    const simplifiedMatch = error.match(/Fila \d+: Error al insertar datos: (.+?)(?:\s*;|$)/);
+    if (simplifiedMatch) {
+      return `Fila ${rowNumber}: ${simplifiedMatch[1]}`;
+    }
+
+    // Si todo falla, retornar el error original pero más corto
+    return error.length > 200 ? error.substring(0, 200) + '...' : error;
   }
 
   clearImportedData() {
     this.importedData.set([]);
     this.validData.set([]);
     this.invalidData.set([]);
+    this.backendErrors.set([]);
   }
 
   confirmImport() {
@@ -588,14 +730,33 @@ export class InitialLoadComponent implements OnInit {
 
     // Initial load usa INICIAL
     this.headerConfigService.importData(this.selectedSubPortfolioId, 'INICIAL', dataToImport).subscribe({
-      next: (response) => {
+      next: (response: any) => {
         console.log('Respuesta del servidor:', response);
-        alert(`✅ Se importaron ${dataToImport.length} filas de datos exitosamente a la tabla dinámica.`);
-        this.clearImportedData();
+
+        // Verificar si hay errores en la respuesta del backend
+        if (response.errors && response.errors.length > 0) {
+          // Simplificar los errores para que sean más entendibles
+          const simplifiedErrors = response.errors.map((error: string) => this.simplifyBackendError(error));
+          this.backendErrors.set(simplifiedErrors);
+          console.error('Errores del backend:', response.errors);
+          // No limpiar los datos importados para que el usuario pueda ver qué falló
+        } else {
+          // Solo si no hay errores, mostrar mensaje de éxito y limpiar
+          alert(`✅ Se importaron ${response.insertedRows || dataToImport.length} filas de datos exitosamente a la tabla dinámica.`);
+          this.clearImportedData();
+        }
       },
       error: (error) => {
-        console.error('Error al importar datos:', error);
-        alert(`❌ Error al importar datos: ${error.error?.message || error.message}\n\nRevise la consola para más detalles.`);
+        console.error('Error HTTP al importar datos:', error);
+
+        // Si el error tiene estructura de errores del backend, mostrarlos
+        if (error.error?.errors && Array.isArray(error.error.errors)) {
+          const simplifiedErrors = error.error.errors.map((err: string) => this.simplifyBackendError(err));
+          this.backendErrors.set(simplifiedErrors);
+        } else {
+          // Error genérico
+          this.backendErrors.set([`Error de conexión: ${error.error?.message || error.message}`]);
+        }
       }
     });
   }

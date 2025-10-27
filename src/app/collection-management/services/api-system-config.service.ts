@@ -152,10 +152,52 @@ export class ApiSystemConfigService {
       // this.loadContactClassifications(),
       // this.loadManagementClassifications(),
       // this.loadActiveCampaigns(),
-      this.loadTenantClassifications()
+      this.loadTenantClassifications(),
+      this.loadTypificationsFromCatalog()
     ]).finally(() => {
       this.isLoading.set(false);
       this.isLoaded.set(true);
+    });
+  }
+
+  /**
+   * Carga tipificaciones desde el catálogo global
+   * Filtra las tipificaciones CUSTOM que son específicas por tenant
+   */
+  private loadTypificationsFromCatalog(): Promise<void> {
+    return new Promise((resolve) => {
+      this.http.get<TypificationCatalogResource[]>(`${environment.apiUrl}/typifications`)
+        .pipe(
+          tap(data => {
+            console.log('Tipificaciones cargadas desde catálogo:', data);
+
+            // Filtrar solo tipificaciones CUSTOM (FinancieraOH, etc)
+            const customTypifications = data.filter(t => t.classificationType === 'CUSTOM');
+
+            // Convertir a formato de gestión para el frontend
+            const managementClasses: ManagementClassificationResource[] = customTypifications.map(t => ({
+              id: t.id,
+              code: t.code,
+              label: t.name,
+              requiresPayment: false,
+              requiresSchedule: false,
+              requiresFollowUp: false,
+              parentId: t.parentTypificationId,
+              hierarchyLevel: t.hierarchyLevel,
+              suggestsFullAmount: null,
+              allowsInstallmentSelection: null,
+              requiresManualAmount: null
+            }));
+
+            this.managementClassifications.set(managementClasses);
+            console.log('Clasificaciones de gestión cargadas:', managementClasses.length);
+          }),
+          catchError(error => {
+            console.error('Error cargando tipificaciones del catálogo:', error);
+            return of([]);
+          })
+        )
+        .subscribe(() => resolve());
     });
   }
 
@@ -170,6 +212,18 @@ export class ApiSystemConfigService {
         return;
       }
 
+      // TEMPORAL: Este endpoint no existe aún, usar datos de ejemplo
+      console.log('[TEMPORAL] loadTenantClassifications - endpoint /tenants/.../typifications no existe');
+
+      // Usar datos de ejemplo mínimos
+      const mockData: TenantTypificationConfigResource[] = [];
+      this.tenantClassifications.set(mockData);
+      this.contactClassifications.set([]);
+      this.managementClassifications.set([]);
+      resolve();
+      return;
+
+      /*
       let url = `${environment.apiUrl}/tenants/${this.currentTenantId}/typifications`;
       if (this.currentPortfolioId) {
         url += `?portfolioId=${this.currentPortfolioId}`;
@@ -222,6 +276,7 @@ export class ApiSystemConfigService {
           })
         )
         .subscribe(() => resolve());
+      */
     });
   }
 

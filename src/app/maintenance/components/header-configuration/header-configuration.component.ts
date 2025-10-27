@@ -118,12 +118,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
             <div class="p-3">
               <!-- Primera fila: Botones principales y contador -->
               <div class="flex flex-wrap items-center gap-2 mb-2">
-                <button (click)="openManualDialog()"
-                        class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer">
-                  <lucide-angular name="plus" [size]="16"></lucide-angular>
-                  <span>Agregar</span>
-                </button>
-
                 <!-- Dropdown para descargar plantillas -->
                 <div class="relative">
                   <button (click)="toggleDownloadMenu()"
@@ -233,7 +227,17 @@ import { SubPortfolio } from '../../models/portfolio.model';
                     @for (header of previewHeaders(); track $index) {
                       <tr class="hover:bg-slate-800 transition-colors">
                         <td class="px-2 py-1.5">
-                          <span class="font-mono text-xs font-semibold text-indigo-400">{{ header.headerName }}</span>
+                          <div class="flex items-center gap-1">
+                            <span class="font-mono text-xs font-semibold text-indigo-400">{{ header.headerName }}</span>
+                            @if (header.sourceField && header.regexPattern) {
+                              <lucide-angular
+                                name="sparkles"
+                                [size]="12"
+                                class="text-amber-400 flex-shrink-0"
+                                title="Campo transformado mediante expresión regular desde: {{ header.sourceField }}">
+                              </lucide-angular>
+                            }
+                          </div>
                         </td>
                         <td class="px-2 py-1.5">
                           <span [class]="getDataTypeBadgeClass(header.dataType)"
@@ -433,6 +437,70 @@ import { SubPortfolio } from '../../models/portfolio.model';
                     Campo obligatorio
                   </label>
                 </div>
+
+                <!-- Sección de Transformación -->
+                <div class="col-span-2 border-t border-slate-700 pt-4 mt-2">
+                  <!-- Toggle Header -->
+                  <button type="button"
+                          (click)="showTransformSection.set(!showTransformSection())"
+                          class="w-full flex items-center justify-between text-sm font-bold text-emerald-400 mb-3 hover:text-emerald-300 transition-colors">
+                    <div class="flex items-center gap-2">
+                      <lucide-angular name="git-branch" [size]="16"></lucide-angular>
+                      Transformación de Campo (Opcional)
+                    </div>
+                    <lucide-angular
+                      [name]="showTransformSection() ? 'chevron-up' : 'chevron-down'"
+                      [size]="16">
+                    </lucide-angular>
+                  </button>
+
+                  @if (showTransformSection()) {
+                    <p class="text-xs text-gray-400 mb-4">
+                      Si este campo se deriva de otro campo mediante regex, configúralo aquí.<br>
+                      Ejemplo: extraer documento desde IDENTITY_CODE.
+                    </p>
+
+                    <div class="grid grid-cols-1 gap-4">
+                      <!-- Campo Origen -->
+                      <div>
+                        <label class="block text-sm font-semibold text-gray-300 mb-2">
+                          <lucide-angular name="arrow-right" [size]="16" class="inline mr-1"></lucide-angular>
+                          Campo Origen
+                        </label>
+                        <select [(ngModel)]="formData.sourceField"
+                                class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                          <option value="">Seleccione un campo origen...</option>
+                          @for (header of availableSourceHeaders(); track header.headerName) {
+                            <option [value]="header.headerName">
+                              {{ header.headerName }} - {{ header.displayLabel }}
+                            </option>
+                          }
+                        </select>
+                        <p class="text-xs text-gray-400 mt-1">
+                          Campo desde donde se extraerá el valor mediante regex.
+                        </p>
+                      </div>
+
+                      <!-- Patrón Regex -->
+                      <div>
+                        <label class="block text-sm font-semibold text-gray-300 mb-2">
+                          <lucide-angular name="code" [size]="16" class="inline mr-1"></lucide-angular>
+                          Patrón Regex
+                          @if (formData.sourceField && formData.sourceField.trim() !== '') {
+                            <span class="text-red-400 ml-1">*</span>
+                          }
+                        </label>
+                        <input type="text"
+                               [(ngModel)]="formData.regexPattern"
+                               placeholder="Ej: .{{8}}$ (últimos 8 caracteres)"
+                               class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-sm">
+                        <p class="text-xs text-gray-400 mt-1">
+                          Ejemplos: <code class="text-emerald-400">.{{8}}$</code> últimos 8 • <code class="text-emerald-400">\\d{{8}}</code> 8 dígitos
+                        </p>
+                      </div>
+                    </div>
+                  }
+                </div>
               </div>
             </div>
 
@@ -472,6 +540,7 @@ export class HeaderConfigurationComponent implements OnInit {
   showManualDialog = signal(false);
   editingIndex = signal<number | null>(null);
   downloadMenuOpen = signal(false);
+  showTransformSection = signal(false);
   dropdownPosition = signal<{ top: number; left: number }>({ top: 120, left: 100 });
   headersAreSaved = signal(false); // Indica si hay cabeceras guardadas en BD
 
@@ -491,6 +560,23 @@ export class HeaderConfigurationComponent implements OnInit {
     });
   });
 
+  // Computed signal para cabeceras disponibles como campo origen (no transformadas)
+  availableSourceHeaders = computed(() => {
+    const currentHeaderName = this.formData.headerName;
+
+    return this.previewHeaders().filter(h => {
+      // No permitir usar campos transformados como origen (evitar cadena de transformaciones)
+      if (h.sourceField && h.regexPattern) {
+        return false;
+      }
+      // No permitir usar el mismo campo como origen
+      if (h.headerName === currentHeaderName) {
+        return false;
+      }
+      return true;
+    });
+  });
+
   selectedTenantId = 0;
   selectedPortfolioId = 0;
   selectedSubPortfolioId = 0;
@@ -503,7 +589,9 @@ export class HeaderConfigurationComponent implements OnInit {
     dataType: 'TEXTO' as DataType,
     displayLabel: '',
     format: '',
-    required: false
+    required: false,
+    sourceField: '',
+    regexPattern: ''
   };
 
   constructor(
@@ -609,7 +697,9 @@ export class HeaderConfigurationComponent implements OnInit {
           dataType: h.dataType,
           displayLabel: h.displayLabel,
           format: h.format,
-          required: h.required
+          required: h.required,
+          sourceField: h.sourceField,
+          regexPattern: h.regexPattern
         }));
         this.previewHeaders.set(items);
         this.headersAreSaved.set(headers.length > 0);
@@ -629,8 +719,11 @@ export class HeaderConfigurationComponent implements OnInit {
       dataType: 'TEXTO',
       displayLabel: '',
       format: '',
-      required: false
+      required: false,
+      sourceField: '',
+      regexPattern: ''
     };
+    this.showTransformSection.set(false);
     this.showManualDialog.set(true);
   }
 
@@ -666,6 +759,13 @@ export class HeaderConfigurationComponent implements OnInit {
       return false;
     }
 
+    // Si hay campo origen, el regex es obligatorio
+    if (this.formData.sourceField && this.formData.sourceField.trim() !== '') {
+      if (!this.formData.regexPattern || this.formData.regexPattern.trim() === '') {
+        return false;
+      }
+    }
+
     // Si no hay campo de BD seleccionado (campo personalizado), debe tener tipo de dato
     if (this.formData.fieldDefinitionId === 0) {
       return !!this.formData.dataType && ['TEXTO', 'NUMERICO', 'FECHA'].includes(this.formData.dataType);
@@ -684,7 +784,9 @@ export class HeaderConfigurationComponent implements OnInit {
       dataType: this.formData.dataType,
       displayLabel: this.formData.displayLabel.trim(),
       format: this.formData.format?.trim() || undefined,
-      required: this.formData.required
+      required: this.formData.required,
+      sourceField: this.formData.sourceField?.trim() || undefined,
+      regexPattern: this.formData.regexPattern?.trim() || undefined
     };
 
     const currentHeaders = [...this.previewHeaders()];
@@ -711,8 +813,12 @@ export class HeaderConfigurationComponent implements OnInit {
       dataType: header.dataType,
       displayLabel: header.displayLabel,
       format: header.format || '',
-      required: header.required || false
+      required: header.required || false,
+      sourceField: header.sourceField || '',
+      regexPattern: header.regexPattern || ''
     };
+    // Expandir sección de transformación si tiene datos
+    this.showTransformSection.set(!!(header.sourceField || header.regexPattern));
     this.showManualDialog.set(true);
   }
 
@@ -897,10 +1003,22 @@ export class HeaderConfigurationComponent implements OnInit {
 
       if (columns.length < 3) continue;
 
-      // Formato: codigoCampo, nombreCabecera, etiquetaVisual, formato (opcional), tipoDato (opcional)
-      const [fieldCode, headerName, displayLabel, format, tipoDato] = columns;
+      // Formato CSV: codigoCampo, nombreCabecera, etiquetaVisual, formato, tipoDato, obligatorio, campoAsociado, regEx
+      const [fieldCode, headerName, displayLabel, format, tipoDato, obligatorio, campoAsociado, regEx] = columns;
 
       if (!headerName || !displayLabel) continue;
+
+      // Parsear el campo obligatorio (puede ser "1", "true", "TRUE", etc.)
+      const isRequired = obligatorio ? (obligatorio === '1' || obligatorio.toLowerCase() === 'true') : undefined;
+
+      // Limpiar el regex si viene entre comillas
+      let cleanRegex = regEx?.trim();
+      if (cleanRegex) {
+        // Remover comillas al inicio y final si existen
+        if (cleanRegex.startsWith('"') && cleanRegex.endsWith('"')) {
+          cleanRegex = cleanRegex.slice(1, -1);
+        }
+      }
 
       // Si fieldCode está vacío, es un campo personalizado (no mapeado a BD)
       if (!fieldCode || fieldCode.trim() === '') {
@@ -916,7 +1034,9 @@ export class HeaderConfigurationComponent implements OnInit {
           dataType: tipoDato.toUpperCase() as DataType,
           displayLabel: displayLabel.trim(),
           format: format?.trim() || undefined,
-          required: false // Campos personalizados no son requeridos por defecto
+          required: isRequired,
+          sourceField: campoAsociado?.trim() || undefined,
+          regexPattern: cleanRegex || undefined
         });
       } else {
         // Campo asociado a BD - buscar en catálogo
@@ -932,7 +1052,9 @@ export class HeaderConfigurationComponent implements OnInit {
           dataType: fieldDef.dataType,
           displayLabel: displayLabel.trim(),
           format: format?.trim() || undefined,
-          required: true // Campos que mapean a base de datos son requeridos por defecto
+          required: isRequired !== undefined ? isRequired : true, // Usar el valor del CSV o true por defecto
+          sourceField: campoAsociado?.trim() || undefined,
+          regexPattern: cleanRegex || undefined
         });
       }
     }
@@ -988,33 +1110,73 @@ export class HeaderConfigurationComponent implements OnInit {
     // Crear el contenido del CSV con el separador seleccionado
     const sep = this.csvSeparator;
 
-    // Crear las filas usando el método helper que escapa correctamente
-    const rows = [
-      ['codigoCampo', 'nombreCabecera', 'etiquetaVisual', 'formato', 'tipoDato'],
-      ['documento', 'DNI', 'Número de Documento', '', ''],
-      ['nombre_completo', 'NOMBRE', 'Nombre del Cliente', '', ''],
-      ['telefono_principal', 'TELEFONO', 'Teléfono Principal', '', ''],
-      ['email', 'CORREO', 'Correo Electrónico', '', ''],
-      ['direccion', 'DIRECCION', 'Dirección Completa', '', ''],
-      ['distrito', 'DISTRITO', 'Distrito', '', ''],
-      ['provincia', 'PROVINCIA', 'Provincia', '', ''],
-      ['numero_contrato', 'NRO_CONTRATO', 'Número de Contrato', '', ''],
-      ['tipo_producto', 'PRODUCTO', 'Tipo de Producto', '', ''],
-      ['estado_cuenta', 'ESTADO', 'Estado de Cuenta', '', ''],
-      ['monto_capital', 'MONTO_CAPITAL', 'Monto Capital (S/.)', 'decimal(18,2)', ''],
-      ['monto_interes', 'INTERES', 'Interés (S/.)', 'decimal(18,2)', ''],
-      ['saldo_pendiente', 'SALDO', 'Saldo Pendiente (S/.)', 'decimal(18,2)', ''],
-      ['monto_mora', 'MORA', 'Monto Mora (S/.)', 'decimal(18,2)', ''],
-      ['dias_mora', 'DIAS_MORA', 'Días de Mora', '', ''],
-      ['monto_minimo_pagar', 'PAGO_MINIMO', 'Monto Mínimo a Pagar (S/.)', 'decimal(18,2)', ''],
-      ['fecha_vencimiento', 'FEC_VENC', 'Fecha de Vencimiento', 'dd/MM/yyyy', ''],
-      ['fecha_desembolso', 'FEC_DESEMB', 'Fecha de Desembolso', 'dd/MM/yyyy', ''],
-      ['fecha_proximo_vencimiento', 'FEC_PROX_VENC', 'Fecha Próximo Vencimiento', 'dd/MM/yyyy', ''],
-      ['fecha_corte', 'FEC_CORTE', 'Fecha de Corte', 'dd/MM/yyyy', ''],
-      ['', 'CAMPO_PERSONALIZADO', 'Ejemplo Campo Extra', '', 'TEXTO']
-    ];
+    let rows: string[][];
 
-    const csvContent = rows.map(row => this.createCsvRow(row, sep)).join('\n');
+    // Si hay configuración cargada, exportar la configuración actual
+    if (this.previewHeaders().length > 0) {
+      // Cabecera
+      rows = [
+        ['codigoCampo', 'nombreCabecera', 'etiquetaVisual', 'formato', 'tipoDato', 'obligatorio', 'campoAsociado', 'regEx']
+      ];
+
+      // Agregar cada header de la configuración actual (sin el regex, lo agregamos manualmente después)
+      this.previewHeaders().forEach(header => {
+        // Buscar el código del campo en fieldDefinitions
+        const fieldDef = this.fieldDefinitions().find(fd => fd.id === header.fieldDefinitionId);
+        const codigoCampo = fieldDef ? fieldDef.fieldCode : '';
+
+        rows.push([
+          codigoCampo,
+          header.headerName,
+          header.displayLabel,
+          header.format || '',
+          header.dataType || '',
+          header.required ? '1' : '0',
+          header.sourceField || '',
+          header.regexPattern || '' // Este será procesado especialmente al crear el CSV
+        ]);
+      });
+    } else {
+      // Si no hay configuración, exportar plantilla vacía con ejemplos
+      rows = [
+        ['codigoCampo', 'nombreCabecera', 'etiquetaVisual', 'formato', 'tipoDato', 'obligatorio', 'campoAsociado', 'regEx'],
+        ['documento', 'DNI', 'Número de Documento', '', 'TEXTO', '1', '', ''],
+        ['nombre_completo', 'NOMBRE', 'Nombre del Cliente', '', 'TEXTO', '1', '', ''],
+        ['telefono_principal', 'TELEFONO', 'Teléfono Principal', '', 'TEXTO', '0', '', ''],
+        ['email', 'CORREO', 'Correo Electrónico', '', 'TEXTO', '0', '', ''],
+        ['monto_capital', 'MONTO_CAPITAL', 'Monto Capital (S/.)', 'decimal(18,2)', 'NUMERICO', '1', '', ''],
+        ['fecha_vencimiento', 'FEC_VENC', 'Fecha de Vencimiento', 'dd/MM/yyyy', 'FECHA', '1', '', ''],
+        ['', 'DOCUMENTO_EXTRAIDO', 'Documento Extraído', '', 'TEXTO', '0', 'DNI', '"^D.*?(\\d{7})$|^C.*?(\\d{8})$"']
+      ];
+    }
+
+    // Crear CSV con tratamiento especial para el campo regEx (última columna)
+    const csvLines = rows.map((row, index) => {
+      if (index === 0) {
+        // La cabecera se procesa normalmente
+        return this.createCsvRow(row, sep);
+      }
+
+      // Para las filas de datos, procesar los primeros 7 campos normalmente
+      // y el último campo (regEx) con comillas forzadas si tiene valor
+      const firstSevenFields = row.slice(0, 7);
+      const regexField = row[7] || '';
+
+      let csvRow = this.createCsvRow(firstSevenFields, sep);
+
+      // Agregar el campo regEx con comillas forzadas si tiene valor
+      if (regexField && regexField.trim() !== '') {
+        // Escapar comillas dobles internas duplicándolas
+        const escapedRegex = regexField.replace(/"/g, '""');
+        csvRow += sep + `"${escapedRegex}"`;
+      } else {
+        csvRow += sep;
+      }
+
+      return csvRow;
+    });
+
+    const csvContent = csvLines.join('\n');
 
     // Crear el blob y descargar
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1025,14 +1187,22 @@ export class HeaderConfigurationComponent implements OnInit {
                          this.csvSeparator === ';' ? 'punto-coma' :
                          this.csvSeparator === '|' ? 'pipe' : 'tab';
 
+    const fileName = this.previewHeaders().length > 0
+      ? `header-configuration-actual-${separatorName}.csv`
+      : `header-configuration-template-${separatorName}.csv`;
+
     link.setAttribute('href', url);
-    link.setAttribute('download', `header-configuration-template-${separatorName}.csv`);
+    link.setAttribute('download', fileName);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    alert('Modelo CSV descargado exitosamente');
+    const message = this.previewHeaders().length > 0
+      ? 'Configuración actual descargada exitosamente'
+      : 'Plantilla CSV descargada exitosamente';
+
+    alert(message);
   }
 
   async downloadExcelTemplate() {

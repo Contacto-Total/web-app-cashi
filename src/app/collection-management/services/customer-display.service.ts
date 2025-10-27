@@ -108,11 +108,14 @@ export class CustomerDisplayService {
   /**
    * Importa clientes desde un archivo Excel/CSV
    */
-  importCustomers(file: File, tenantId: number, tenantCode: string): Observable<ImportResponse> {
+  importCustomers(file: File, tenantId: number, tenantCode: string, subPortfolioId?: number): Observable<ImportResponse> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('tenantId', tenantId.toString());
     formData.append('tenantCode', tenantCode);
+    if (subPortfolioId !== undefined && subPortfolioId !== null) {
+      formData.append('subPortfolioId', subPortfolioId.toString());
+    }
 
     return this.http.post<ImportResponse>(`${this.apiUrl}/import`, formData);
   }

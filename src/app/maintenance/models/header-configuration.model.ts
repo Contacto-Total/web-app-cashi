@@ -8,6 +8,8 @@ export interface HeaderConfiguration {
   format?: string;
   required: boolean;
   loadType: LoadType;
+  sourceField?: string;        // Campo origen para transformación
+  regexPattern?: string;       // Patrón regex para extraer valor
   createdAt?: string;
   updatedAt?: string;
 }
@@ -24,6 +26,8 @@ export interface CreateHeaderConfigurationRequest {
   format?: string;
   required?: boolean;
   loadType: LoadType;
+  sourceField?: string;
+  regexPattern?: string;
 }
 
 export interface UpdateHeaderConfigurationRequest {
@@ -47,4 +51,6 @@ export interface HeaderConfigurationItem {
   displayLabel: string;
   format?: string;
   required?: boolean;
+  sourceField?: string;
+  regexPattern?: string;
 }

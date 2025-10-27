@@ -8,12 +8,17 @@
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
   --bg-tertiary: #f1f5f9;
+  --bg-card: #ffffff;
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-tertiary: #94a3b8;
-  --border-color: #e2e8f0;
+  --border-color: #cbd5e1;
   --nav-bg: #1e293b;
   --nav-text: #f1f5f9;
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --table-header: #f1f5f9;
+  --table-row-hover: #f8fafc;
 }
 
 /* Variables de tema oscuro */
@@ -21,12 +26,17 @@
   --bg-primary: #020617;
   --bg-secondary: #0f172a;
   --bg-tertiary: #1e293b;
+  --bg-card: #0f172a;
   --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
   --text-tertiary: #64748b;
   --border-color: #334155;
   --nav-bg: #0f172a;
   --nav-text: #f1f5f9;
+  --input-bg: #1e293b;
+  --input-border: #334155;
+  --table-header: #1e293b;
+  --table-row-hover: #1e293b;
 }
 
 body {
@@ -55,6 +65,397 @@ html, body {
 
 :root.dark {
   color-scheme: dark;
+}
+
+/* Clases de utilidad que responden al tema */
+/* Fondos */
+.bg-app-primary { background-color: var(--bg-primary); }
+.bg-app-secondary { background-color: var(--bg-secondary); }
+.bg-app-tertiary { background-color: var(--bg-tertiary); }
+
+/* Textos */
+.text-app-primary { color: var(--text-primary); }
+.text-app-secondary { color: var(--text-secondary); }
+.text-app-tertiary { color: var(--text-tertiary); }
+
+/* Bordes */
+.border-app { border-color: var(--border-color); }
+
+/* Clases específicas para componentes comunes */
+.card-bg {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+.input-bg {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+/* Navegación */
+.nav-bg {
+  background-color: var(--nav-bg);
+  color: var(--nav-text);
+}
+
+/* ========================================
+   TEMA CLARO - SOBRESCRITURAS GLOBALES
+   ======================================== */
+
+/* FONDOS PRINCIPALES */
+:root:not(.dark) .bg-slate-950 {
+  background-color: #f1f5f9 !important; /* Fondo principal gris muy claro */
+}
+
+:root:not(.dark) .bg-slate-900 {
+  background-color: #ffffff !important; /* Cards y paneles en blanco */
+}
+
+:root:not(.dark) .bg-slate-800 {
+  background-color: #f8fafc !important; /* Fondos secundarios */
+}
+
+:root:not(.dark) .bg-slate-700 {
+  background-color: #e2e8f0 !important; /* Hover states */
+}
+
+/* Eliminar gradientes oscuros */
+:root:not(.dark) .bg-gradient-to-br,
+:root:not(.dark) .bg-gradient-to-r {
+  background-image: none !important;
+}
+
+:root:not(.dark) .from-slate-900,
+:root:not(.dark) .via-slate-800,
+:root:not(.dark) .to-slate-900 {
+  background-color: #f1f5f9 !important;
+}
+
+/* TEXTOS */
+:root:not(.dark) .text-white {
+  color: #0f172a !important; /* Textos principales oscuros */
+}
+
+:root:not(.dark) .text-gray-400 {
+  color: #64748b !important; /* Textos secundarios */
+}
+
+:root:not(.dark) .text-gray-300 {
+  color: #475569 !important; /* Textos terciarios */
+}
+
+:root:not(.dark) .text-gray-500 {
+  color: #64748b !important;
+}
+
+:root:not(.dark) .text-gray-200 {
+  color: #334155 !important;
+}
+
+/* BORDES */
+:root:not(.dark) .border-slate-800 {
+  border-color: #cbd5e1 !important;
+}
+
+:root:not(.dark) .border-slate-700 {
+  border-color: #e2e8f0 !important;
+}
+
+/* INPUTS, SELECTS Y TEXTAREAS */
+:root:not(.dark) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+:root:not(.dark) select,
+:root:not(.dark) textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+:root:not(.dark) input::placeholder,
+:root:not(.dark) textarea::placeholder {
+  color: #94a3b8 !important;
+  opacity: 0.7 !important;
+}
+
+:root:not(.dark) input:focus,
+:root:not(.dark) select:focus,
+:root:not(.dark) textarea:focus {
+  border-color: #3b82f6 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+:root:not(.dark) input:hover:not(:focus),
+:root:not(.dark) select:hover:not(:focus),
+:root:not(.dark) textarea:hover:not(:focus) {
+  border-color: #94a3b8 !important;
+}
+
+:root:not(.dark) input:disabled,
+:root:not(.dark) select:disabled,
+:root:not(.dark) textarea:disabled {
+  background-color: #f1f5f9 !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+/* Select options */
+:root:not(.dark) select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* TABLAS */
+:root:not(.dark) table {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) table thead {
+  background-color: #f1f5f9 !important;
+}
+
+:root:not(.dark) table thead th {
+  color: #334155 !important;
+  border-color: #e2e8f0 !important;
+}
+
+:root:not(.dark) table tbody tr {
+  border-color: #e2e8f0 !important;
+}
+
+:root:not(.dark) table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+:root:not(.dark) table tbody td {
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* BOTONES - Mantener colores originales pero asegurar contraste */
+:root:not(.dark) button.text-white,
+:root:not(.dark) .bg-blue-600 .text-white,
+:root:not(.dark) .bg-green-600 .text-white,
+:root:not(.dark) .bg-red-600 .text-white,
+:root:not(.dark) .bg-purple-600 .text-white,
+:root:not(.dark) .bg-emerald-600 .text-white,
+:root:not(.dark) .bg-indigo-600 .text-white,
+:root:not(.dark) .bg-orange-600 .text-white,
+:root:not(.dark) label.text-white {
+  color: #ffffff !important;
+}
+
+/* Botones neutros en modo claro */
+:root:not(.dark) .bg-slate-800.text-gray-300 {
+  background-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+:root:not(.dark) .bg-slate-800.text-gray-300:hover {
+  background-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+/* BADGES Y TAGS */
+:root:not(.dark) .bg-blue-900\/30 {
+  background-color: #dbeafe !important;
+}
+
+:root:not(.dark) .bg-emerald-900\/30 {
+  background-color: #d1fae5 !important;
+}
+
+:root:not(.dark) .bg-amber-900\/30 {
+  background-color: #fef3c7 !important;
+}
+
+:root:not(.dark) .bg-purple-900\/30 {
+  background-color: #e9d5ff !important;
+}
+
+:root:not(.dark) .bg-red-900\/30 {
+  background-color: #fecaca !important;
+}
+
+:root:not(.dark) .bg-green-900\/30 {
+  background-color: #d1fae5 !important;
+}
+
+/* Textos de badges */
+:root:not(.dark) .text-blue-400 {
+  color: #2563eb !important;
+}
+
+:root:not(.dark) .text-emerald-400 {
+  color: #059669 !important;
+}
+
+:root:not(.dark) .text-amber-400 {
+  color: #d97706 !important;
+}
+
+:root:not(.dark) .text-purple-400 {
+  color: #7c3aed !important;
+}
+
+:root:not(.dark) .text-red-400 {
+  color: #dc2626 !important;
+}
+
+:root:not(.dark) .text-green-400 {
+  color: #059669 !important;
+}
+
+:root:not(.dark) .text-indigo-400 {
+  color: #4f46e5 !important;
+}
+
+/* SOMBRAS Y EFECTOS */
+:root:not(.dark) .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+:root:not(.dark) .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+:root:not(.dark) .shadow-xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* DIVISORES */
+:root:not(.dark) .divide-slate-800 > * + * {
+  border-color: #e2e8f0 !important;
+}
+
+/* HOVER STATES */
+:root:not(.dark) .hover\:bg-slate-800:hover {
+  background-color: #f1f5f9 !important;
+}
+
+:root:not(.dark) .hover\:bg-slate-700:hover {
+  background-color: #e2e8f0 !important;
+}
+
+:root:not(.dark) .hover\:text-white:hover {
+  color: #0f172a !important;
+}
+
+/* Hover para botones de colores */
+:root:not(.dark) .bg-blue-600:hover {
+  background-color: #1d4ed8 !important;
+}
+
+:root:not(.dark) .bg-green-600:hover {
+  background-color: #15803d !important;
+}
+
+:root:not(.dark) .bg-red-600:hover {
+  background-color: #b91c1c !important;
+}
+
+:root:not(.dark) .bg-purple-600:hover {
+  background-color: #7c3aed !important;
+}
+
+:root:not(.dark) .bg-emerald-600:hover {
+  background-color: #047857 !important;
+}
+
+:root:not(.dark) .bg-indigo-600:hover {
+  background-color: #4338ca !important;
+}
+
+:root:not(.dark) .bg-orange-600:hover {
+  background-color: #c2410c !important;
+}
+
+/* Hover para elementos de lista/menu */
+:root:not(.dark) .hover\:bg-blue-900\/30:hover {
+  background-color: #bfdbfe !important;
+}
+
+:root:not(.dark) .hover\:bg-red-900\/30:hover {
+  background-color: #fca5a5 !important;
+}
+
+/* ICONOS */
+:root:not(.dark) lucide-angular {
+  color: inherit !important;
+}
+
+/* BOTONES GHOST/OUTLINE */
+:root:not(.dark) button:not([class*="bg-blue"]):not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-purple"]):not([class*="bg-emerald"]):not([class*="bg-indigo"]):not([class*="bg-orange"]) {
+  transition: all 0.2s ease !important;
+}
+
+:root:not(.dark) button:not([class*="bg-blue"]):not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-purple"]):not([class*="bg-emerald"]):not([class*="bg-indigo"]):not([class*="bg-orange"]):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* CARDS Y PANELES */
+:root:not(.dark) .rounded-lg,
+:root:not(.dark) .rounded-xl {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+:root:not(.dark) .shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* TRANSICIONES SUAVES */
+:root:not(.dark) * {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* SCROLLBARS en modo claro */
+:root:not(.dark) ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+:root:not(.dark) ::-webkit-scrollbar-track {
+  background-color: #f1f5f9;
+}
+
+:root:not(.dark) ::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
+}
+
+:root:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
+/* FOCUS VISIBLE para accesibilidad */
+:root:not(.dark) *:focus-visible {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px !important;
+}
+
+/* CHECKBOXES Y RADIOS personalizados */
+:root:not(.dark) input[type="checkbox"],
+:root:not(.dark) input[type="radio"] {
+  accent-color: #3b82f6 !important;
+}
+
+/* TOGGLES / SWITCHES */
+:root:not(.dark) .peer:checked ~ div {
+  background-color: #3b82f6 !important;
+}
+
+:root:not(.dark) .peer ~ div {
+  background-color: #cbd5e1 !important;
+}
+
+/* TOOLTIP y DROPDOWN menus */
+:root:not(.dark) [class*="absolute"][class*="bg-slate"] {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid #e2e8f0 !important;
 }
 
 /* SOLUCIÓN DEFINITIVA: Deshabilitar TODAS las clases dark: cuando NO hay .dark en el HTML */

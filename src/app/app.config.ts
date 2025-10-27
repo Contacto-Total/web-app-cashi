@@ -1,7 +1,7 @@
 import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
-import { LucideAngularModule, Activity, AlertCircle, BarChart3, Bell, BookOpen, Briefcase, Building, Building2, Calendar, Check, CheckCircle, ChevronDown, ChevronRight, ChevronUp, Circle, Clock, CreditCard, Database, DollarSign, Edit, Eye, EyeOff, FileText, Folder, FolderOpen, FolderTree, GitBranch, History, Inbox, Info, LayoutDashboard, Mail, MapPin, MessageSquare, Moon, Phone, PhoneCall, PhoneOff, Plus, PlusCircle, Rocket, Save, Search, Settings, ShoppingCart, Star, Sun, Table, Table2, Trash2, TrendingUp, Type, User, Users, Wallet, X, XCircle, Zap } from 'lucide-angular';
+import { LucideAngularModule, Activity, AlertCircle, ArrowRight, BarChart3, Bell, BookOpen, Briefcase, Building, Building2, Calendar, Check, CheckCircle, ChevronDown, ChevronRight, ChevronUp, Circle, Clock, Code, CreditCard, Database, DollarSign, Edit, Eye, EyeOff, FilePlus, FileText, Flag, Folder, FolderOpen, FolderTree, FunctionSquare, GitBranch, Glasses, History, Home, Inbox, Info, LayoutDashboard, List, Loader, Mail, Map, MapPin, MessageSquare, Moon, Phone, PhoneCall, PhoneIncoming, PhoneOff, Plus, PlusCircle, Rocket, Save, Search, Settings, ShoppingCart, Smile, Sparkles, Star, Sun, Table, Table2, Tag, Trash2, TrendingUp, Type, User, Users, Wallet, X, XCircle, Zap } from 'lucide-angular';
 
 import { routes } from './app.routes';
 
@@ -14,6 +14,7 @@ export const appConfig: ApplicationConfig = {
       LucideAngularModule.pick({
         Activity,
         AlertCircle,
+        ArrowRight,
         BarChart3,
         Bell,
         BookOpen,
@@ -28,27 +29,37 @@ export const appConfig: ApplicationConfig = {
         ChevronUp,
         Circle,
         Clock,
+        Code,
         CreditCard,
         Database,
         DollarSign,
         Edit,
         Eye,
         EyeOff,
+        FilePlus,
         FileText,
+        Flag,
         Folder,
         FolderOpen,
         FolderTree,
+        FunctionSquare,
         GitBranch,
+        Glasses,
         History,
+        Home,
         Inbox,
         Info,
         LayoutDashboard,
+        List,
+        Loader,
         Mail,
+        Map,
         MapPin,
         MessageSquare,
         Moon,
         Phone,
         PhoneCall,
+        PhoneIncoming,
         PhoneOff,
         Plus,
         PlusCircle,
@@ -57,10 +68,13 @@ export const appConfig: ApplicationConfig = {
         Search,
         Settings,
         ShoppingCart,
+        Smile,
+        Sparkles,
         Star,
         Sun,
         Table,
         Table2,
+        Tag,
         Trash2,
         TrendingUp,
         Type,

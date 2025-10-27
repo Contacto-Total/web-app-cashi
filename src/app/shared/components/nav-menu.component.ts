@@ -29,11 +29,17 @@ import { ThemeService } from '../services/theme.service';
 
             <!-- Enlaces principales -->
             <div class="hidden md:flex items-center gap-1">
-              <a routerLink="/collection-management"
+              <a routerLink="/webphone"
                  routerLinkActive="bg-blue-600 text-white"
                  class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-gray-300 hover:bg-slate-800 hover:text-white transition-all font-medium text-sm">
                 <lucide-angular name="briefcase" [size]="16"></lucide-angular>
                 <span>Cobranza</span>
+              </a>
+              <a routerLink="/customers"
+                 routerLinkActive="bg-blue-600 text-white"
+                 class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-gray-300 hover:bg-slate-800 hover:text-white transition-all font-medium text-sm">
+                <lucide-angular name="users" [size]="16"></lucide-angular>
+                <span>Clientes</span>
               </a>
             </div>
           </div>

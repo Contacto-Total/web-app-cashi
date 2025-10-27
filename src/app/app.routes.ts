@@ -3,8 +3,12 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: '/collection-management',
+    redirectTo: '/webphone',
     pathMatch: 'full'
+  },
+  {
+    path: 'webphone',
+    loadComponent: () => import('./collection-management/pages/webphone.page').then(m => m.WebphonePage)
   },
   {
     path: 'collection-management',
@@ -45,6 +49,10 @@ export const routes: Routes = [
   {
     path: 'data-load/daily',
     loadComponent: () => import('./data-load/components/daily-load/daily-load.component').then(m => m.DailyLoadComponent)
+  },
+  {
+    path: 'customers',
+    loadComponent: () => import('./customers/components/customer-view/customer-view.component').then(m => m.CustomerViewComponent)
   },
   {
     path: '**',
