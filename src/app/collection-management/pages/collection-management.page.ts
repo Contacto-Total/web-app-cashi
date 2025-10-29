@@ -385,7 +385,7 @@ import { PaymentScheduleViewComponent } from '../components/payment-schedule-vie
                                 </div>
                                 <button
                                   type="button"
-                                  (click)="openScheduleDetail(gestion.managementId)"
+                                  (click)="openScheduleDetail(gestion.id)"
                                   class="text-[8px] px-1.5 py-0.5 bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors font-bold">
                                   Ver Detalle
                                 </button>
@@ -780,14 +780,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected callDuration = signal(0);
   protected saving = signal(false);
   protected showScheduleDetail = signal(false);
-  protected scheduleManagementId = signal<string | null>(null);
+  protected scheduleManagementId = signal<number | null>(null);
   protected showOutputSelector = false; // Para el dropdown de campos del cliente
   protected errors = signal<ValidationErrors>({});
   protected showSuccess = signal(false);
   protected animateEntry = signal(true);
   protected activeTab = signal('cliente');
   protected historialGestiones = signal<Array<{
-    managementId: string;
+    id: number;
     fecha: string;
     asesor: string;
     resultado: string;
@@ -1306,20 +1306,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         // Mapear gestiones y cargar cronogramas
         const historial = managements.map(m => {
           const historyItem = {
-            managementId: m.managementId,
-            fecha: this.formatDateTime(m.managementDate),
+            id: m.id,
+            fecha: new Date().toLocaleString('es-PE'), // TEMPORAL: No hay fecha de gestión en el nuevo modelo
             asesor: m.advisorId,
-            resultado: 'Gestión realizada', // TEMPORAL: Los datos ahora están en tipificaciones_gestion
-            gestion: m.typificationDescription || '-',
+            resultado: 'Gestión realizada',
+            gestion: m.level3Name || m.level2Name || m.level1Name || '-',
             observacion: m.observations || 'Sin observaciones',
-            duracion: m.callDetail ? this.calculateCallDuration(m.callDetail) : '00:00:00',
+            duracion: '00:00:00', // TEMPORAL: No hay callDetail en el nuevo modelo
             hasSchedule: m.typificationRequiresSchedule || false,
             schedule: null as any
           };
 
           // Cargar cronograma si existe
           if (historyItem.hasSchedule) {
-            this.paymentScheduleService.getPaymentScheduleByManagementId(m.managementId).subscribe({
+            this.paymentScheduleService.getPaymentScheduleByManagementId(m.id).subscribe({
               next: (schedule) => {
                 if (schedule) {
                   historyItem.schedule = schedule;
@@ -1372,7 +1372,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
   }
 
-  protected openScheduleDetail(managementId: string) {
+  protected openScheduleDetail(managementId: number) {
     this.scheduleManagementId.set(managementId);
     this.showScheduleDetail.set(true);
   }
@@ -2049,34 +2049,42 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Obtener IDs de las 3 tipificaciones seleccionadas
     const selectedClassifs = this.selectedClassifications();
     const typificationLevel1Id = Number(selectedClassifs[0]);
-    const typificationLevel2Id = Number(selectedClassifs[1]);
-    const typificationLevel3Id = Number(selectedClassifs[2]);
+    const typificationLevel2Id = selectedClassifs[1] ? Number(selectedClassifs[1]) : null;
+    const typificationLevel3Id = selectedClassifs[2] ? Number(selectedClassifs[2]) : null;
+
+    // Get classification names
+    const allTypifications = this.managementClassifications();
+    const level1 = allTypifications.find((c: any) => c.id.toString() === selectedClassifs[0]);
+    const level2 = selectedClassifs[1] ? allTypifications.find((c: any) => c.id.toString() === selectedClassifs[1]) : null;
+    const level3 = selectedClassifs[2] ? allTypifications.find((c: any) => c.id.toString() === selectedClassifs[2]) : null;
 
     const request: CreateManagementRequest = {
-      customerId: String(this.customerData().id),  // Usar ID numérico convertido a string
+      customerId: String(this.customerData().id),
       advisorId: 'ADV-001',
 
       // Multi-tenant fields
       tenantId: this.selectedTenantId!,
-      portfolioId: this.selectedPortfolioId!,
-      subPortfolioId: null,  // TODO: Obtener del contexto cuando esté disponible
-      campaignId: Number(this.campaign().id),
+      portfolioId: this.selectedPortfolioId || 1, // Temporal: asignar 1 si no está seleccionado
+      subPortfolioId: 1, // Temporal: asignar 1
 
-      // Jerarquía de tipificaciones (3 niveles)
-      typificationLevel1Id,
-      typificationLevel2Id,
-      typificationLevel3Id,
+      // Phone from customer data
+      phone: this.customerData().contacto?.telefono_principal || '',
 
-      observations: this.managementForm.observaciones,
-      dynamicFields: this.dynamicFieldValues() // Incluir campos dinámicos
+      // Hierarchy levels with IDs and names
+      level1Id: typificationLevel1Id,
+      level1Name: level1?.label || '',
+      level2Id: typificationLevel2Id,
+      level2Name: level2?.label || null,
+      level3Id: typificationLevel3Id,
+      level3Name: level3?.label || null,
+
+      observations: this.managementForm.observaciones
     };
 
     this.managementService.createManagement(request).subscribe({
       next: (response) => {
-        this.managementId = response.managementId;
-
         if (this.callStartTime && this.callActive()) {
-          this.registerCallToBackend(response.managementId);
+          this.registerCallToBackend(response.id);
         }
 
         // NOTA: Los pagos ahora se registran automáticamente en el backend desde dynamicFields
@@ -2097,7 +2105,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     });
   }
 
-  private registerCallToBackend(managementId: string) {
+  private registerCallToBackend(managementId: number) {
     if (!this.callStartTime) return;
 
     const startCallRequest: StartCallRequest = {

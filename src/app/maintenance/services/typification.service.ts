@@ -238,6 +238,11 @@ export class TypificationService {
     return this.http.delete<void>(`${this.baseUrl}/system-config/portfolios/${portfolioId}`);
   }
 
+  // SubPortfolio Management
+  getSubPortfoliosByPortfolio(portfolioId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/system-config/portfolios/${portfolioId}/subportfolios`);
+  }
+
   // CSV Column Mapping Management
   saveCsvMappings(portfolioId: number, csvHeaders: string[]): Observable<CsvMappingResource[]> {
     return this.http.post<CsvMappingResource[]>(

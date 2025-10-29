@@ -120,6 +120,14 @@ import { ThemeService } from '../services/theme.service';
                     <lucide-angular name="table-2" [size]="16" class="text-gray-400 group-hover:text-indigo-400"></lucide-angular>
                     <span class="text-gray-300 group-hover:text-white font-medium text-sm">Config. Cabeceras</span>
                   </a>
+
+                  <!-- Blacklist -->
+                  <a routerLink="/maintenance/blacklist"
+                     (click)="closeMenus()"
+                     class="flex items-center gap-2 px-3 py-2 hover:bg-slate-700 transition-colors group">
+                    <lucide-angular name="shield-ban" [size]="16" class="text-gray-400 group-hover:text-red-400"></lucide-angular>
+                    <span class="text-gray-300 group-hover:text-white font-medium text-sm">Blacklist</span>
+                  </a>
                 </div>
               }
             </div>

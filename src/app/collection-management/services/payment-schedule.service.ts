@@ -77,7 +77,7 @@ export class PaymentScheduleService {
   /**
    * Obtiene el cronograma de pagos asociado a una gestión
    */
-  getPaymentScheduleByManagementId(managementId: string): Observable<PaymentScheduleResource> {
+  getPaymentScheduleByManagementId(managementId: number): Observable<PaymentScheduleResource> {
     return this.http.get<PaymentScheduleResource>(`${this.baseUrl}/management/${managementId}`);
   }
 
@@ -106,7 +106,7 @@ export class PaymentScheduleService {
   /**
    * Obtiene el último estado de cada cuota de una gestión
    */
-  getLatestStatusByManagement(managementId: string): Observable<InstallmentStatusHistoryResource[]> {
+  getLatestStatusByManagement(managementId: number): Observable<InstallmentStatusHistoryResource[]> {
     return this.http.get<InstallmentStatusHistoryResource[]>(
       `${this.baseUrl}/management/${managementId}/latest-status`
     );

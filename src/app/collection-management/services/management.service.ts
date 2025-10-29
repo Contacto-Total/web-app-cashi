@@ -6,27 +6,31 @@ import { PaymentSchedule } from '../models/payment-schedule.model';
 
 export interface ManagementResource {
   id: number;
-  managementId: string;
   customerId: string;
   advisorId: string;
-  campaignId: string;
-  managementDate: string;
 
-  // Categoría: Grupo al que pertenece la tipificación (era classificationCode)
-  categoryCode: string;
-  categoryDescription: string;
+  // Multi-tenant fields
+  tenantId: number;
+  tenantName: string;
+  portfolioId: number;
+  portfolioName: string;
+  subPortfolioId?: number;
+  subPortfolioName?: string;
 
-  // Tipificación: Código específico/hoja (último nivel en jerarquía)
-  typificationCode: string;
-  typificationDescription: string;
+  // Contact info
+  phone: string;
+
+  // Hierarchical categorization
+  level1Id: number;
+  level1Name: string;
+  level2Id?: number;
+  level2Name?: string;
+  level3Id?: number;
+  level3Name?: string;
+
+  observations?: string;
   typificationRequiresPayment?: boolean;
   typificationRequiresSchedule?: boolean;
-
-  callDetail?: CallDetailResource;
-  paymentDetail?: PaymentDetailResource;
-  observations?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface CallDetailResource {
@@ -54,15 +58,19 @@ export interface CreateManagementRequest {
   tenantId: number;
   portfolioId: number;
   subPortfolioId?: number | null;
-  campaignId: number;  // Long en Java = number en TypeScript
 
-  // Jerarquía de tipificaciones (3 niveles)
-  typificationLevel1Id: number;
-  typificationLevel2Id: number;
-  typificationLevel3Id: number;
+  // Contact info
+  phone: string;
+
+  // Hierarchical categorization (3 levels)
+  level1Id: number;
+  level1Name: string;
+  level2Id?: number | null;
+  level2Name?: string | null;
+  level3Id?: number | null;
+  level3Name?: string | null;
 
   observations?: string;
-  dynamicFields?: { [key: string]: any }; // Campos dinámicos configurados por clasificación
 }
 
 export interface StartCallRequest {
@@ -108,20 +116,16 @@ export class ManagementService {
     return this.http.get<ManagementResource[]>(`${this.baseUrl}/advisor/${advisorId}`);
   }
 
-  getManagementsByCampaign(campaignId: string): Observable<ManagementResource[]> {
-    return this.http.get<ManagementResource[]>(`${this.baseUrl}/campaign/${campaignId}`);
-  }
-
   getActiveSchedulesByCustomer(customerId: string): Observable<PaymentSchedule[]> {
     console.log('[SCHEDULE] Fetching active schedules for customer:', customerId);
     return this.http.get<PaymentSchedule[]>(`${this.scheduleUrl}/customer/${customerId}/active`);
   }
 
-  startCall(managementId: string, request: StartCallRequest): Observable<ManagementResource> {
+  startCall(managementId: number, request: StartCallRequest): Observable<ManagementResource> {
     return this.http.post<ManagementResource>(`${this.baseUrl}/${managementId}/call/start`, request);
   }
 
-  endCall(managementId: string, request: EndCallRequest): Observable<ManagementResource> {
+  endCall(managementId: number, request: EndCallRequest): Observable<ManagementResource> {
     return this.http.post<ManagementResource>(`${this.baseUrl}/${managementId}/call/end`, request);
   }
 

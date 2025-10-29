@@ -612,7 +612,7 @@ export class CustomerViewComponent implements OnInit {
   searchCriteriaOptions = [
     { value: 'documento', label: 'Documento', icon: 'id-card' },
     { value: 'numero_cuenta', label: 'Número de Cuenta', icon: 'credit-card' },
-    { value: 'telefono_principal', label: 'Teléfono Principal', icon: 'phone' }
+    { value: 'telefono', label: 'Teléfono', icon: 'phone' }
   ];
 
   ngOnInit() {

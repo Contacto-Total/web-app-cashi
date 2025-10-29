@@ -218,7 +218,7 @@ import { PaymentScheduleService, InstallmentResource, UpdateInstallmentStatusReq
 export class InstallmentStatusDialogComponent {
   isOpen = signal(false);
   installment = signal<InstallmentResource | null>(null);
-  managementId = signal<string>('');
+  managementId = signal<number>(0);
 
   selectedStatus = signal<'COMPLETADO' | 'VENCIDO' | 'CANCELADO' | null>(null);
   paymentDate = '';
@@ -249,7 +249,7 @@ export class InstallmentStatusDialogComponent {
     });
   }
 
-  open(installment: InstallmentResource, managementId: string) {
+  open(installment: InstallmentResource, managementId: number) {
     this.installment.set(installment);
     this.managementId.set(managementId);
     this.isOpen.set(true);
@@ -278,7 +278,7 @@ export class InstallmentStatusDialogComponent {
     this.observations = '';
     this.errorMessage.set(null);
     this.installment.set(null);
-    this.managementId.set('');
+    this.managementId.set(0);
   }
 
   save() {

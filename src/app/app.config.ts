@@ -1,7 +1,7 @@
 import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
-import { LucideAngularModule, Activity, AlertCircle, ArrowRight, BarChart3, Bell, BookOpen, Briefcase, Building, Building2, Calendar, Check, CheckCircle, ChevronDown, ChevronRight, ChevronUp, Circle, Clock, Code, CreditCard, Database, DollarSign, Edit, Eye, EyeOff, FilePlus, FileText, Flag, Folder, FolderOpen, FolderTree, FunctionSquare, GitBranch, Glasses, History, Home, Inbox, Info, LayoutDashboard, List, Loader, Mail, Map, MapPin, MessageSquare, Moon, Phone, PhoneCall, PhoneIncoming, PhoneOff, Plus, PlusCircle, Rocket, Save, Search, Settings, ShoppingCart, Smile, Sparkles, Star, Sun, Table, Table2, Tag, Trash2, TrendingUp, Type, User, Users, Wallet, X, XCircle, Zap } from 'lucide-angular';
+import { LucideAngularModule, Activity, AlertCircle, ArrowRight, BarChart3, Bell, BookOpen, Briefcase, Building, Building2, Calendar, Check, CheckCircle, ChevronDown, ChevronRight, ChevronUp, Circle, Clock, Code, CreditCard, Database, DollarSign, Edit, Eye, EyeOff, FilePlus, FileText, Filter, Flag, Folder, FolderOpen, FolderTree, FunctionSquare, GitBranch, Glasses, History, Home, Inbox, Info, LayoutDashboard, List, Loader, Mail, Map, MapPin, MessageSquare, Moon, Phone, PhoneCall, PhoneIncoming, PhoneOff, Plus, PlusCircle, Rocket, Save, Search, Settings, ShieldBan, ShoppingCart, Smile, Sparkles, Star, Sun, Table, Table2, Tag, Trash2, TrendingUp, Type, User, Users, Wallet, X, XCircle, Zap } from 'lucide-angular';
 
 import { routes } from './app.routes';
 
@@ -38,6 +38,7 @@ export const appConfig: ApplicationConfig = {
         EyeOff,
         FilePlus,
         FileText,
+        Filter,
         Flag,
         Folder,
         FolderOpen,
@@ -67,6 +68,7 @@ export const appConfig: ApplicationConfig = {
         Save,
         Search,
         Settings,
+        ShieldBan,
         ShoppingCart,
         Smile,
         Sparkles,

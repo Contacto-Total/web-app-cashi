@@ -225,7 +225,7 @@ interface InstallmentWithStatus extends InstallmentResource {
   styles: []
 })
 export class PaymentScheduleViewComponent implements OnChanges {
-  @Input() managementId: string = '';
+  @Input() managementId: number = 0;
   @ViewChild('statusDialog') statusDialog!: InstallmentStatusDialogComponent;
 
   schedule = signal<PaymentScheduleResource | null>(null);
