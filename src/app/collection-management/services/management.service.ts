@@ -12,9 +12,9 @@ export interface ManagementResource {
   campaignId: string;
   managementDate: string;
 
-  // Clasificación: Categoría/grupo al que pertenece la tipificación
-  classificationCode: string;
-  classificationDescription: string;
+  // Categoría: Grupo al que pertenece la tipificación (era classificationCode)
+  categoryCode: string;
+  categoryDescription: string;
 
   // Tipificación: Código específico/hoja (último nivel en jerarquía)
   typificationCode: string;
@@ -49,17 +49,18 @@ export interface PaymentDetailResource {
 export interface CreateManagementRequest {
   customerId: string;
   advisorId: string;
-  campaignId: string;
 
-  // Clasificación: Categoría/grupo al que pertenece la tipificación
-  classificationCode: string;
-  classificationDescription: string;
+  // Multi-tenant fields
+  tenantId: number;
+  portfolioId: number;
+  subPortfolioId?: number | null;
+  campaignId: number;  // Long en Java = number en TypeScript
 
-  // Tipificación: Código específico/hoja (último nivel en jerarquía)
-  typificationCode: string;
-  typificationDescription: string;
-  typificationRequiresPayment?: boolean;
-  typificationRequiresSchedule?: boolean;
+  // Jerarquía de tipificaciones (3 niveles)
+  typificationLevel1Id: number;
+  typificationLevel2Id: number;
+  typificationLevel3Id: number;
+
   observations?: string;
   dynamicFields?: { [key: string]: any }; // Campos dinámicos configurados por clasificación
 }

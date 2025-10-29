@@ -808,7 +808,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   campaign = computed(() => this.systemConfigService.getCampaign());
   contactClassifications = computed(() => this.systemConfigService.getContactClassifications());
-  managementClassifications = computed(() => this.systemConfigService.getManagementClassifications());
+  managementClassifications = computed(() => this.apiSystemConfigService.getManagementClassificationsForUI());
 
   managementClassificationsHierarchical = computed(() => {
     const all: any[] = this.managementClassifications() as any[];
@@ -921,16 +921,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   isFormValid = computed(() => {
     // 1. Verificar clasificación seleccionada
     if (this.usesHierarchicalClassifications()) {
-      // Sistema jerárquico: verificar que se haya llegado a una clasificación "hoja"
+      // Sistema jerárquico: verificar que se haya seleccionado al menos una clasificación
       const selected = this.selectedClassifications();
 
       if (selected.length === 0 || !selected[selected.length - 1]) {
         return false;
       }
 
-      // Verificar que sea una clasificación hoja (sin hijos)
-      const isLeaf = this.isLeafClassification();
-      if (!isLeaf) {
+      // TEMPORAL: No verificar isLeaf mientras los campos dinámicos estén deshabilitados
+      // Verificar que no haya más niveles disponibles (no debe haber hijos)
+      const lastSelectedId = selected[selected.length - 1];
+      const all: any[] = this.managementClassifications() as any[];
+      const hasChildren = all.some((c: any) => c.parentId && Number(c.parentId) === Number(lastSelectedId));
+
+      // Solo es válido si no hay hijos disponibles O si ya llegamos al último nivel
+      if (hasChildren) {
+        console.log('[isFormValid] Aún hay niveles por seleccionar');
         return false;
       }
     } else {
@@ -972,11 +978,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   });
 
   hierarchyLevels = computed(() => {
-    const all = this.managementClassifications();
+    const all: any[] = this.managementClassifications() as any[];
     const selected = this.selectedClassifications();
     const levels: any[][] = [];
 
+    console.log('[hierarchyLevels] Total classifications:', all.length);
+    console.log('[hierarchyLevels] Selected:', selected);
+
     const roots = all.filter(c => c.hierarchyLevel === 1 || !c.parentId);
+    console.log('[hierarchyLevels] Nivel 1 (roots):', roots.length, roots.map((r: any) => `${r.codigo} (ID:${r.id})`));
 
     if (roots.length > 0) {
       levels.push(roots);
@@ -984,18 +994,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     for (let i = 0; i < selected.length; i++) {
       const parentId = selected[i];
+      console.log(`[hierarchyLevels] Buscando hijos del nivel ${i+1}, parentId:`, parentId);
 
       if (parentId) {
-        const children = all.filter(c => c.parentId && Number(c.parentId) === Number(parentId));
+        const children = all.filter((c: any) => c.parentId && Number(c.parentId) === Number(parentId));
+        console.log(`[hierarchyLevels] Encontrados ${children.length} hijos:`, children.map((c: any) => `${c.codigo} (ID:${c.id}, parent:${c.parentId})`));
 
         if (children.length > 0) {
           levels.push(children);
         } else {
+          console.log(`[hierarchyLevels] No se encontraron hijos, deteniendo búsqueda`);
           break;
         }
       }
     }
 
+    console.log('[hierarchyLevels] Total niveles construidos:', levels.length);
     return levels;
   });
 
@@ -1202,7 +1216,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         // El backend devuelve un array directo, no un objeto paginado
         if (customers && customers.length > 0) {
           const customer = customers[0];
-          console.log('Primer cliente cargado:', customer);
+          console.log('🔍 [FRONTEND] Primer cliente cargado:', customer);
+          console.log('🔍 [FRONTEND] accountNumber en el customer:', customer.accountNumber);
+          console.log('🔍 [FRONTEND] Campos disponibles:', Object.keys(customer));
 
           // Buscar teléfono principal - puede ser telefono, phone, o PHONE
           const phoneContact = customer.contactMethods?.find((c: any) =>
@@ -1215,8 +1231,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             c.contactType?.toLowerCase() === 'email'
           );
 
+          const accountNumberValue = customer.accountNumber || '';
+          console.log('🔍 [FRONTEND] Valor final de numero_cuenta:', accountNumberValue);
+
           // Mapear los datos del cliente al formato del signal
           this.customerData.set({
+            id: customer.id,  // ID numérico del cliente (PK)
             id_cliente: customer.customerId || customer.identificationCode || customer.id?.toString(),
             nombre_completo: customer.fullName || '',
             tipo_documento: customer.documentType || 'DNI',
@@ -1231,7 +1251,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
               direccion: customer.address || ''
             },
             cuenta: {
-              numero_cuenta: '',
+              numero_cuenta: accountNumberValue,
               tipo_producto: customer.subPortfolioName || '',
               fecha_desembolso: '',
               monto_original: 0,
@@ -1289,8 +1309,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             managementId: m.managementId,
             fecha: this.formatDateTime(m.managementDate),
             asesor: m.advisorId,
-            resultado: m.classificationDescription || m.classificationCode || '-',
-            gestion: m.typificationDescription || m.typificationCode || '-',
+            resultado: 'Gestión realizada', // TEMPORAL: Los datos ahora están en tipificaciones_gestion
+            gestion: m.typificationDescription || '-',
             observacion: m.observations || 'Sin observaciones',
             duracion: m.callDetail ? this.calculateCallDuration(m.callDetail) : '00:00:00',
             hasSchedule: m.typificationRequiresSchedule || false,
@@ -1439,7 +1459,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     if (value) {
       this.managementForm.tipoGestion = value;
-      this.loadDynamicFields(Number(value));
+      const numValue = Number(value);
+      if (!isNaN(numValue) && numValue > 0) {
+        this.loadDynamicFields(numValue);
+      } else {
+        this.dynamicFields.set([]);
+        this.dynamicFieldValues.set({});
+        this.isLeafClassification.set(false);
+      }
     } else {
       const lastValid = this.selectedClassifications().filter(v => v).pop();
       this.managementForm.tipoGestion = lastValid || '';
@@ -1450,6 +1477,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   private loadDynamicFields(typificationId: number) {
+    // TEMPORAL: Endpoint no implementado aún, deshabilitar para evitar errores 500
+    console.log('[TEMPORAL] loadDynamicFields deshabilitado - endpoint /tenants/.../typifications/.../fields no existe');
+    this.isLoadingDynamicFields.set(false);
+    this.isLeafClassification.set(false);
+    this.dynamicFields.set([]);
+    this.dynamicFieldsSchema.set(null);
+    return;
+
+    /* CÓDIGO ORIGINAL - Rehabilitar cuando se implemente el endpoint
     this.isLoadingDynamicFields.set(true);
     this.apiSystemConfigService.getClassificationFields(typificationId).subscribe({
       next: (response) => {
@@ -1519,6 +1555,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.dynamicFieldsSchema.set(null);
       }
     });
+    */
   }
 
   /**
@@ -1859,12 +1896,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   showPaymentSection(): boolean {
-    const selectedManagement = this.systemConfigService.getManagementClassificationById(this.managementForm.tipoGestion);
+    const selectedManagement = this.managementClassifications().find(c => c.id === this.managementForm.tipoGestion);
     return selectedManagement?.requiere_pago || false;
   }
 
   showScheduleSection(): boolean {
-    const selectedManagement = this.systemConfigService.getManagementClassificationById(this.managementForm.tipoGestion);
+    const selectedManagement = this.managementClassifications().find(c => c.id === this.managementForm.tipoGestion);
     return selectedManagement?.requiere_cronograma || false;
   }
 
@@ -2009,20 +2046,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       managementClassification = this.managementClassifications().find((g: any) => g.id === this.managementForm.tipoGestion);
     }
 
+    // Obtener IDs de las 3 tipificaciones seleccionadas
+    const selectedClassifs = this.selectedClassifications();
+    const typificationLevel1Id = Number(selectedClassifs[0]);
+    const typificationLevel2Id = Number(selectedClassifs[1]);
+    const typificationLevel3Id = Number(selectedClassifs[2]);
+
     const request: CreateManagementRequest = {
-      customerId: this.customerData().id_cliente,
+      customerId: String(this.customerData().id),  // Usar ID numérico convertido a string
       advisorId: 'ADV-001',
-      campaignId: this.campaign().id,
 
-      // Clasificación: Categoría/grupo al que pertenece la tipificación
-      classificationCode: contactClassification?.codigo || '',
-      classificationDescription: contactClassification?.label || '',
+      // Multi-tenant fields
+      tenantId: this.selectedTenantId!,
+      portfolioId: this.selectedPortfolioId!,
+      subPortfolioId: null,  // TODO: Obtener del contexto cuando esté disponible
+      campaignId: Number(this.campaign().id),
 
-      // Tipificación: Código específico/hoja (último nivel en jerarquía)
-      typificationCode: managementClassification?.codigo || '',
-      typificationDescription: managementClassification?.label || '',
-      typificationRequiresPayment: managementClassification?.requiere_pago,
-      typificationRequiresSchedule: (managementClassification as ManagementClassification)?.requiere_cronograma,
+      // Jerarquía de tipificaciones (3 niveles)
+      typificationLevel1Id,
+      typificationLevel2Id,
+      typificationLevel3Id,
 
       observations: this.managementForm.observaciones,
       dynamicFields: this.dynamicFieldValues() // Incluir campos dinámicos
@@ -2162,10 +2205,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     this.activeTab.set('historial');
 
-    // Ocultar mensaje de éxito y redirigir al webphone
+    // Ocultar mensaje de éxito
     setTimeout(() => {
       this.showSuccess.set(false);
-      this.router.navigate(['/webphone']);
     }, 3000);
   }
 
@@ -2174,12 +2216,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     // 1. Validar clasificación (sistema jerárquico o simple)
     if (this.usesHierarchicalClassifications()) {
-      // Sistema jerárquico: verificar que se haya seleccionado clasificación hoja
+      // Sistema jerárquico: verificar que se haya seleccionado clasificación completa
       const selected = this.selectedClassifications();
       if (selected.length === 0 || !selected[selected.length - 1]) {
         newErrors['typification'] = 'Debe seleccionar una clasificación';
-      } else if (!this.isLeafClassification()) {
-        newErrors['typification'] = 'Debe completar todos los niveles de clasificación';
+      } else {
+        // TEMPORAL: No verificar isLeaf, verificar si hay hijos disponibles
+        const lastSelectedId = selected[selected.length - 1];
+        const all: any[] = this.managementClassifications() as any[];
+        const hasChildren = all.some((c: any) => c.parentId && Number(c.parentId) === Number(lastSelectedId));
+
+        if (hasChildren) {
+          newErrors['typification'] = 'Debe completar todos los niveles de clasificación';
+        }
       }
     } else {
       // Sistema simple: verificar resultado de contacto

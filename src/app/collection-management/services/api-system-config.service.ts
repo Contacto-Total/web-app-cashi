@@ -136,7 +136,10 @@ export class ApiSystemConfigService {
 
     this.currentTenantId = tenantId;
     this.currentPortfolioId = portfolioId;
+
+    // Recargar tipificaciones del catálogo (CUSTOM) después de cambiar contexto
     this.loadTenantClassifications();
+    this.loadTypificationsFromCatalog();
   }
 
   /**
@@ -191,6 +194,9 @@ export class ApiSystemConfigService {
 
             this.managementClassifications.set(managementClasses);
             console.log('Clasificaciones de gestión cargadas:', managementClasses.length);
+            console.log('Nivel 1 (sin parentId):', managementClasses.filter(c => !c.parentId).map(c => `${c.code} (${c.label})`));
+            console.log('Nivel 2 (con parentId):', managementClasses.filter(c => c.parentId && c.hierarchyLevel === 2).map(c => `${c.code} -> parent:${c.parentId}`));
+            console.log('Nivel 3 (con parentId):', managementClasses.filter(c => c.parentId && c.hierarchyLevel === 3).map(c => `${c.code} -> parent:${c.parentId}`));
           }),
           catchError(error => {
             console.error('Error cargando tipificaciones del catálogo:', error);
@@ -361,7 +367,7 @@ export class ApiSystemConfigService {
    */
   getManagementClassificationsForUI() {
     return this.managementClassifications().map(item => ({
-      id: item.code,
+      id: String(item.id),  // Usar el ID numérico como string para que funcione la jerarquía
       codigo: item.code,
       label: item.label,
       requiere_pago: item.requiresPayment,

@@ -31,4 +31,4 @@ distrito;DISTRITO;Distrito;;TEXTO;1;;
 departamento;DEPARTAMENTO;Departamento;;TEXTO;1;;
 promocion_4;LTD_ESPECIAL;LTD Especial;decimal(18,2);NUMERICO;1;;
 ;BLOQUEO;Bloqueo;;TEXTO;1;;
-documento;DOCUMENTO;Documento;;TEXTO;0;IDENTITY_CODE;"^D.*?(\d{7})$|^C.*?(\d{8})$"
+documento;DOCUMENTO;Documento;;TEXTO;0;IDENTITY_CODE;^D.*?(\d{8})$|^C.*?(\d{9})$

@@ -13,38 +13,45 @@ import { CustomerService, CustomerResource } from '../../services/customer.servi
 
       @if (!customer()) {
         <!-- Search Screen -->
-        <div class="flex-1 flex items-center justify-center p-6">
-          <div class="max-w-xl w-full">
-            <div class="text-center mb-6">
-              <div class="inline-flex p-4 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl mb-4 shadow-lg">
-                <lucide-angular name="search" [size]="40" class="text-white"></lucide-angular>
+        <div class="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
+          <!-- Header -->
+          <div class="max-w-7xl mx-auto mb-6">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
+                <lucide-angular name="search" [size]="24" class="text-white"></lucide-angular>
               </div>
-              <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Buscar Cliente</h1>
-              <p class="text-gray-600 dark:text-gray-400 text-sm">Selecciona el criterio de búsqueda e ingresa el valor</p>
+              <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Buscar Cliente</h1>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Encuentra clientes por documento, cuenta o teléfono</p>
+              </div>
             </div>
+          </div>
 
-            <div class="bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl p-6 shadow-2xl">
-              <!-- Dropdown de criterios -->
-              <div class="mb-3">
-                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Buscar por:</label>
+          <!-- Search Bar -->
+          <div class="max-w-7xl mx-auto mb-6">
+            <div class="bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl p-4 shadow-lg">
+              <div class="flex gap-2 items-center">
                 <select [(ngModel)]="searchCriteria"
-                        class="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                        class="px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                   @for (option of searchCriteriaOptions; track option.value) {
                     <option [value]="option.value">{{ option.label }}</option>
                   }
                 </select>
-              </div>
-
-              <!-- Input y botón de búsqueda -->
-              <div class="flex gap-3">
                 <input type="text"
                        [(ngModel)]="searchDocument"
                        (keyup.enter)="searchCustomer()"
                        [placeholder]="'Ingrese ' + getSelectedCriteriaLabel().toLowerCase()"
-                       class="flex-1 px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="flex-1 px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                @if (searchPerformed() || showMultipleResults()) {
+                  <button (click)="clearSearch()"
+                          class="px-5 py-2.5 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:shadow-lg hover:shadow-gray-500/50 transition-all font-semibold cursor-pointer flex items-center gap-2">
+                    <lucide-angular name="x" [size]="18"></lucide-angular>
+                    <span>Limpiar</span>
+                  </button>
+                }
                 <button (click)="searchCustomer()"
                         [disabled]="loading()"
-                        class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg hover:shadow-blue-600/50 transition-all font-semibold cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg hover:shadow-blue-600/50 transition-all font-semibold cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                   @if (loading()) {
                     <lucide-angular name="loader" [size]="18" class="animate-spin"></lucide-angular>
                   } @else {
@@ -53,68 +60,124 @@ import { CustomerService, CustomerResource } from '../../services/customer.servi
                   <span>{{ loading() ? 'Buscando...' : 'Buscar' }}</span>
                 </button>
               </div>
+            </div>
+          </div>
 
+          <!-- Results Section -->
+          <div class="max-w-7xl mx-auto">
               @if (searchPerformed() && !customer() && !loading() && !showMultipleResults()) {
-                <div class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700/50 rounded-lg flex items-center gap-2">
+                <div class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700/50 rounded-lg flex items-center gap-2">
                   <lucide-angular name="alert-circle" [size]="16" class="text-red-600 dark:text-red-400"></lucide-angular>
                   <p class="text-red-600 dark:text-red-400 text-sm">Cliente no encontrado: <strong>{{ searchDocument }}</strong></p>
                 </div>
               }
 
               @if (showMultipleResults() && searchResults().length > 0) {
-                <div class="mt-4">
-                  <div class="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700/50 rounded-lg flex items-center gap-2">
+                <div>
+                  <div class="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700/50 rounded-lg flex items-center gap-2">
                     <lucide-angular name="info" [size]="16" class="text-blue-600 dark:text-blue-400"></lucide-angular>
-                    <p class="text-blue-600 dark:text-blue-400 text-sm font-semibold">Se encontraron {{ searchResults().length }} clientes en diferentes subcarteras. Seleccione uno:</p>
+                    <p class="text-blue-600 dark:text-blue-400 text-sm font-semibold">Se encontraron {{ searchResults().length }} cuentas para este cliente. Seleccione una:</p>
                   </div>
-                  <div class="space-y-2 max-h-80 overflow-y-auto">
-                    @for (result of searchResults(); track result.id) {
-                      <button (click)="selectCustomerFromResults(result)"
-                              class="w-full px-4 py-3 bg-white dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 border-2 border-gray-300 dark:border-slate-600 hover:border-blue-500 dark:hover:border-blue-500 rounded-lg text-left transition-all cursor-pointer">
-                        <div class="flex items-center justify-between gap-3">
-                          <div class="flex-1">
-                            <div class="font-bold text-gray-900 dark:text-white mb-1">{{ result.fullName }}</div>
-                            <div class="text-xs text-gray-600 dark:text-gray-400">
-                              <span class="font-semibold">Doc:</span> {{ result.documentNumber }}
-                              @if (result.identificationCode) {
-                                <span class="ml-2"><span class="font-semibold">Código:</span> {{ result.identificationCode }}</span>
-                              }
-                            </div>
-                          </div>
-                          <div class="flex flex-col items-end gap-1">
-                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-600/50 rounded-md">
-                              <lucide-angular name="folder-tree" [size]="12" class="text-purple-600 dark:text-purple-400"></lucide-angular>
-                              <span class="text-xs font-semibold text-purple-700 dark:text-purple-300">{{ result.subPortfolioName || 'Subcartera ' + result.subPortfolioId }}</span>
-                            </div>
-                            @if (result.portfolioName) {
-                              <div class="text-[10px] text-gray-500 dark:text-gray-400">
-                                <lucide-angular name="folder" [size]="10" class="inline mr-1"></lucide-angular>
-                                {{ result.portfolioName }}
-                              </div>
-                            }
-                          </div>
-                        </div>
-                      </button>
-                    }
+
+                  <!-- Tabla de Datos del Cliente (Encabezado) -->
+                  <div class="mb-3">
+                    <table class="w-full text-xs border-collapse">
+                      <thead>
+                        <tr class="bg-blue-100 dark:bg-blue-900/30">
+                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Nombre Completo</th>
+                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Documento</th>
+                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Edad</th>
+                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Email</th>
+                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Dirección</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr class="bg-white dark:bg-slate-700">
+                          <td class="px-2 py-2 text-gray-900 dark:text-white font-semibold border border-gray-300 dark:border-slate-600">{{ searchResults()[0]?.fullName || 'N/A' }}</td>
+                          <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ searchResults()[0]?.documentNumber || 'N/A' }}</td>
+                          <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ searchResults()[0]?.age || 'N/A' }}</td>
+                          <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ getFirstEmail(searchResults()[0]) || 'N/A' }}</td>
+                          <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ searchResults()[0]?.address || 'N/A' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Tabla de Cuentas -->
+                  <div class="overflow-x-auto max-h-96">
+                    <table class="w-full text-xs border-collapse">
+                      <thead>
+                        <tr class="bg-gray-200 dark:bg-slate-700">
+                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">ID</th>
+                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Proveedor</th>
+                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Cartera</th>
+                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Subcartera</th>
+                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Cuenta</th>
+                          <th class="px-2 py-2 text-right text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Días Mora</th>
+                          <th class="px-2 py-2 text-right text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Monto Mora</th>
+                          <th class="px-2 py-2 text-right text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Capital</th>
+                          <th class="px-2 py-2 text-center text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Acción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (result of searchResults(); track result.id) {
+                          <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                            <td class="px-2 py-2 text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">{{ result.id }}</td>
+                            <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ result.tenantName || 'N/A' }}</td>
+                            <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ result.portfolioName || 'N/A' }}</td>
+                            <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ result.subPortfolioName || 'N/A' }}</td>
+                            <td class="px-2 py-2 text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">{{ result.accountNumber || 'N/A' }}</td>
+                            <td class="px-2 py-2 text-right border border-gray-300 dark:border-slate-600">
+                              <span [class]="result.overdueDays && result.overdueDays > 0 ? 'px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded font-semibold' : 'text-gray-900 dark:text-white'">
+                                {{ result.overdueDays ?? 0 }}
+                              </span>
+                            </td>
+                            <td class="px-2 py-2 text-right text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">
+                              {{ result.overdueAmount ? (result.overdueAmount | number:'1.2-2') : '0.00' }}
+                            </td>
+                            <td class="px-2 py-2 text-right text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">
+                              {{ result.principalAmount ? (result.principalAmount | number:'1.2-2') : '0.00' }}
+                            </td>
+                            <td class="px-2 py-2 text-center border border-gray-300 dark:border-slate-600">
+                              <button (click)="selectCustomerFromResults(result)" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-colors">
+                                Gestionar
+                              </button>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               }
 
-              @if (recentCustomers().length > 0 && !showMultipleResults()) {
-                <div class="mt-4 pt-4 border-t border-gray-300 dark:border-slate-700">
-                  <p class="text-xs text-gray-600 dark:text-gray-500 mb-2">Clientes recientes:</p>
-                  <div class="flex flex-col gap-2 max-h-40 overflow-y-auto">
-                    @for (customer of recentCustomers(); track customer.document) {
-                      <button (click)="quickSearch(customer.document)"
-                              class="px-3 py-2 bg-gray-200 dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 rounded text-xs transition-colors cursor-pointer text-left">
-                        <div class="font-semibold">{{ customer.document }}</div>
-                        <div class="text-[10px] text-gray-500 dark:text-gray-400">{{ customer.fullName }}</div>
-                      </button>
-                    }
+              @if (recentCustomers().length > 0 && !showMultipleResults() && !searchPerformed()) {
+                <div class="mt-6">
+                  <div class="bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl p-4 shadow-lg">
+                    <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Clientes recientes:</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                      @for (customer of recentCustomers(); track customer.document) {
+                        <button (click)="quickSearch(customer.document)"
+                                class="px-3 py-2.5 bg-gray-100 dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 rounded-lg text-xs transition-colors cursor-pointer text-left border border-gray-200 dark:border-slate-600">
+                          <div class="flex items-start justify-between gap-2">
+                            <div class="flex-1">
+                              <div class="font-bold text-sm">{{ customer.document }}</div>
+                              <div class="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">{{ customer.fullName }}</div>
+                            </div>
+                          </div>
+                          <div class="flex items-center gap-1.5 mt-2 text-[10px] text-gray-500 dark:text-gray-400">
+                            <span class="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded font-medium">{{ customer.tenantName }}</span>
+                            <span class="text-gray-400 dark:text-gray-500">›</span>
+                            <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded font-medium">{{ customer.portfolioName }}</span>
+                            <span class="text-gray-400 dark:text-gray-500">›</span>
+                            <span class="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded font-medium">{{ customer.subPortfolioName }}</span>
+                          </div>
+                        </button>
+                      }
+                    </div>
                   </div>
                 </div>
               }
-            </div>
           </div>
         </div>
       } @else {
@@ -218,6 +281,15 @@ import { CustomerService, CustomerResource } from '../../services/customer.servi
                 <div class="flex items-center gap-1.5">
                   <lucide-angular name="users" [size]="14"></lucide-angular>
                   <span>Referencias</span>
+                </div>
+              </button>
+
+              <button (click)="activeTab.set('cuentas')"
+                      [class]="activeTab() === 'cuentas' ? 'border-b-2 border-green-500 text-green-700 dark:text-white bg-green-100 dark:bg-green-900/20' : 'text-gray-600 dark:text-gray-400'"
+                      class="px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:text-green-700 dark:hover:text-white hover:bg-green-50 dark:hover:bg-green-900/30 rounded-t-lg">
+                <div class="flex items-center gap-1.5">
+                  <lucide-angular name="wallet" [size]="14"></lucide-angular>
+                  <span>Cuenta</span>
                 </div>
               </button>
             </div>
@@ -446,6 +518,65 @@ import { CustomerService, CustomerResource } from '../../services/customer.servi
                   </div>
                 }
 
+                <!-- Cuenta Tab - Información Financiera -->
+                @if (activeTab() === 'cuentas') {
+                  <div class="space-y-2">
+
+                    <!-- Sección: Número de Cuenta -->
+                    <div class="bg-white dark:bg-slate-800/50 rounded-lg p-2 border border-green-200 dark:border-green-600/20">
+                      <div class="flex items-center gap-1 mb-1.5">
+                        <div class="p-0.5 bg-green-100 dark:bg-green-600/20 rounded">
+                          <lucide-angular name="credit-card" [size]="10" class="text-green-600 dark:text-green-400"></lucide-angular>
+                        </div>
+                        <h3 class="text-[10px] font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">Número de Cuenta</h3>
+                      </div>
+                      <div class="grid grid-cols-1 gap-1.5">
+                        <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
+                          <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">Número de Cuenta</p>
+                          <p class="text-xs text-gray-900 dark:text-white font-medium font-mono">{{ customer()?.accountNumber || 'N/A' }}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Sección: Información de Mora -->
+                    <div class="bg-white dark:bg-slate-800/50 rounded-lg p-2 border border-red-200 dark:border-red-600/20">
+                      <div class="flex items-center gap-1 mb-1.5">
+                        <div class="p-0.5 bg-red-100 dark:bg-red-600/20 rounded">
+                          <lucide-angular name="alert-circle" [size]="10" class="text-red-600 dark:text-red-400"></lucide-angular>
+                        </div>
+                        <h3 class="text-[10px] font-bold text-red-700 dark:text-red-300 uppercase tracking-wide">Información de Mora</h3>
+                      </div>
+                      <div class="grid grid-cols-2 gap-1.5">
+                        <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
+                          <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">Días de Mora</p>
+                          <p class="text-xs text-gray-900 dark:text-white font-bold">{{ customer()?.overdueDays ?? 0 }} días</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
+                          <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">Monto de Mora</p>
+                          <p class="text-xs text-gray-900 dark:text-white font-bold">S/ {{ customer()?.overdueAmount ? (customer()!.overdueAmount | number:'1.2-2') : '0.00' }}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Sección: Capital -->
+                    <div class="bg-white dark:bg-slate-800/50 rounded-lg p-2 border border-blue-200 dark:border-blue-600/20">
+                      <div class="flex items-center gap-1 mb-1.5">
+                        <div class="p-0.5 bg-blue-100 dark:bg-blue-600/20 rounded">
+                          <lucide-angular name="dollar-sign" [size]="10" class="text-blue-600 dark:text-blue-400"></lucide-angular>
+                        </div>
+                        <h3 class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Monto Capital</h3>
+                      </div>
+                      <div class="grid grid-cols-1 gap-1.5">
+                        <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
+                          <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">Monto Capital</p>
+                          <p class="text-xs text-gray-900 dark:text-white font-bold">S/ {{ customer()?.principalAmount ? (customer()!.principalAmount | number:'1.2-2') : '0.00' }}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                }
+
               </div>
             </div>
 
@@ -464,12 +595,12 @@ export class CustomerViewComponent implements OnInit {
   private customerService = inject(CustomerService);
 
   customer = signal<CustomerResource | null>(null);
-  activeTab = signal<'personal' | 'contacto' | 'ubicacion' | 'referencias'>('personal');
+  activeTab = signal<'personal' | 'contacto' | 'ubicacion' | 'referencias' | 'cuentas'>('cuentas');
   searchDocument = '';
-  searchCriteria = 'codigo_identificacion'; // Criterio de búsqueda por defecto
+  searchCriteria = 'documento'; // Criterio de búsqueda por defecto
   searchPerformed = signal(false);
   loading = signal(false);
-  recentCustomers = signal<{document: string, fullName: string}[]>([]);
+  recentCustomers = signal<{document: string, fullName: string, tenantName: string, portfolioName: string, subPortfolioName: string}[]>([]);
   searchResults = signal<CustomerResource[]>([]);
   showMultipleResults = signal(false);
 
@@ -479,7 +610,6 @@ export class CustomerViewComponent implements OnInit {
 
   // Opciones de criterios de búsqueda
   searchCriteriaOptions = [
-    { value: 'codigo_identificacion', label: 'Código de Identificación', icon: 'file-text' },
     { value: 'documento', label: 'Documento', icon: 'id-card' },
     { value: 'numero_cuenta', label: 'Número de Cuenta', icon: 'credit-card' },
     { value: 'telefono_principal', label: 'Teléfono Principal', icon: 'phone' }
@@ -512,7 +642,8 @@ export class CustomerViewComponent implements OnInit {
     this.showMultipleResults.set(false);
     this.searchResults.set([]);
 
-    this.customerService.searchCustomersByCriteria(this.tenantId, this.searchCriteria, this.searchDocument).subscribe({
+    // Usar búsqueda multi-tenant (sin filtro de tenantId) para encontrar duplicados entre inquilinos
+    this.customerService.searchCustomersAcrossAllTenants(this.searchCriteria, this.searchDocument).subscribe({
       next: (data) => {
         console.log('Resultados encontrados:', data);
         if (data.length === 0) {
@@ -526,7 +657,7 @@ export class CustomerViewComponent implements OnInit {
           this.searchResults.set([]);
           this.showMultipleResults.set(false);
         } else {
-          // Múltiples resultados, mostrar lista de selección
+          // Múltiples resultados, mostrar lista de selección (incluye duplicados entre tenants)
           this.customer.set(null);
           this.searchResults.set(data);
           this.showMultipleResults.set(true);
@@ -544,9 +675,24 @@ export class CustomerViewComponent implements OnInit {
   }
 
   selectCustomerFromResults(selectedCustomer: CustomerResource) {
-    this.customer.set(selectedCustomer);
-    this.showMultipleResults.set(false);
-    this.searchResults.set([]);
+    // Register access for this specific customer
+    this.customerService.registerCustomerAccess(selectedCustomer.id).subscribe({
+      next: () => {
+        console.log('✅ Acceso registrado para cliente ID:', selectedCustomer.id);
+        this.customer.set(selectedCustomer);
+        this.showMultipleResults.set(false);
+        this.searchResults.set([]);
+        // Reload recent customers to reflect the update
+        this.loadRecentCustomers();
+      },
+      error: (error) => {
+        console.error('Error registrando acceso del cliente:', error);
+        // Still show the customer even if tracking fails
+        this.customer.set(selectedCustomer);
+        this.showMultipleResults.set(false);
+        this.searchResults.set([]);
+      }
+    });
   }
 
   getSelectedCriteriaLabel(): string {
@@ -566,6 +712,13 @@ export class CustomerViewComponent implements OnInit {
     this.showMultipleResults.set(false);
     this.searchResults.set([]);
     this.activeTab.set('personal');
+  }
+
+  clearSearch() {
+    this.searchDocument = '';
+    this.searchPerformed.set(false);
+    this.showMultipleResults.set(false);
+    this.searchResults.set([]);
   }
 
   // Obtener icono según la edad
@@ -764,5 +917,14 @@ export class CustomerViewComponent implements OnInit {
       const numB = b.subtype.includes('1') ? 1 : 2;
       return numA - numB;
     });
+  }
+
+  /**
+   * Obtiene el primer email de un resultado de búsqueda
+   */
+  getFirstEmail(customer: CustomerResource | null | undefined): string | null {
+    if (!customer || !customer.contactMethods) return null;
+    const emailContact = customer.contactMethods.find(cm => cm.contactType === 'email');
+    return emailContact ? emailContact.value : null;
   }
 }

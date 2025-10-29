@@ -66,6 +66,11 @@ export interface CustomerResource {
   id: number;
   customerId: string;
   identificationCode: string;
+  accountNumber?: string;
+  // Información financiera/deuda
+  overdueDays?: number | null;
+  overdueAmount?: number | null;
+  principalAmount?: number | null;
   documentNumber: string;
   fullName: string;
   documentType: string;
@@ -175,7 +180,20 @@ export class CustomerService {
     });
   }
 
-  getRecentCustomers(): Observable<{document: string, fullName: string}[]> {
-    return this.http.get<{document: string, fullName: string}[]>(`${this.apiUrl}/recent`);
+  searchCustomersAcrossAllTenants(searchBy: string, value: string): Observable<CustomerResource[]> {
+    return this.http.get<CustomerResource[]>(`${this.apiUrl}/search-all-tenants`, {
+      params: {
+        searchBy: searchBy,
+        value: value
+      }
+    });
+  }
+
+  getRecentCustomers(): Observable<{document: string, fullName: string, tenantName: string, portfolioName: string, subPortfolioName: string}[]> {
+    return this.http.get<{document: string, fullName: string, tenantName: string, portfolioName: string, subPortfolioName: string}[]>(`${this.apiUrl}/recent`);
+  }
+
+  registerCustomerAccess(customerId: number): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${customerId}/access`, {});
   }
 }
