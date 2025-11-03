@@ -67,6 +67,10 @@ export const routes: Routes = [
     loadComponent: () => import('./customers/components/customer-view/customer-view.component').then(m => m.CustomerViewComponent)
   },
   {
+    path: 'testing/google-drive',
+    loadComponent: () => import('./testing/components/google-drive-test.component').then(m => m.GoogleDriveTestComponent)
+  },
+  {
     path: '**',
     redirectTo: '/collection-management'
   }

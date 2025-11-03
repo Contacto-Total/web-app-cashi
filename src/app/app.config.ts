@@ -1,7 +1,7 @@
 import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
-import { LucideAngularModule, Activity, AlertCircle, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bell, BookOpen, Briefcase, Building, Building2, Calendar, Check, CheckCircle, ChevronDown, ChevronRight, ChevronUp, Circle, Clock, Code, Copy, CreditCard, Database, DollarSign, Edit, Eye, EyeOff, FilePlus, FileText, Filter, Flag, Folder, FolderOpen, FolderTree, FunctionSquare, GitBranch, Glasses, HandMetal, History, Home, Inbox, Info, Key, LayoutDashboard, List, Loader, Mail, Map, MapPin, MessageSquare, Moon, Package, Phone, PhoneCall, PhoneIncoming, PhoneOff, Plus, PlusCircle, Rocket, Save, Search, SearchX, Settings, Shield, ShieldBan, ShieldCheck, ShieldOff, ShoppingCart, Smile, Sparkles, Star, Sun, Table, Table2, Tag, Trash2, TrendingUp, Type, User, UserCircle, UserCog, Users, UserX, Wallet, X, XCircle, Zap } from 'lucide-angular';
+import { LucideAngularModule, Activity, AlertCircle, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bell, BookOpen, Briefcase, Building, Building2, Calendar, Check, CheckCircle, ChevronDown, ChevronRight, ChevronUp, Circle, Clock, Code, Copy, CreditCard, Database, DollarSign, Download, Edit, Eye, EyeOff, ExternalLink, FilePlus, FileText, Filter, Flag, Folder, FolderOpen, FolderTree, FolderX, FunctionSquare, GitBranch, Glasses, HandMetal, HardDrive, History, Home, Image, Inbox, Info, Key, LayoutDashboard, List, Loader, Mail, Map, MapPin, MessageSquare, Moon, Music, Package, Phone, PhoneCall, PhoneIncoming, PhoneOff, Plus, PlusCircle, Presentation, RefreshCw, Rocket, Save, Search, SearchX, Settings, Shield, ShieldBan, ShieldCheck, ShieldOff, ShoppingCart, Smile, Sparkles, Star, Sun, Table, Table2, Tag, Trash2, TrendingUp, Type, User, UserCircle, UserCog, Users, UserX, Video, Wallet, X, XCircle, Zap } from 'lucide-angular';
 
 import { routes } from './app.routes';
 
@@ -37,9 +37,11 @@ export const appConfig: ApplicationConfig = {
         CreditCard,
         Database,
         DollarSign,
+        Download,
         Edit,
         Eye,
         EyeOff,
+        ExternalLink,
         FilePlus,
         FileText,
         Filter,
@@ -47,12 +49,15 @@ export const appConfig: ApplicationConfig = {
         Folder,
         FolderOpen,
         FolderTree,
+        FolderX,
         FunctionSquare,
         GitBranch,
         Glasses,
         HandMetal,
+        HardDrive,
         History,
         Home,
+        Image,
         Inbox,
         Info,
         Key,
@@ -64,6 +69,7 @@ export const appConfig: ApplicationConfig = {
         MapPin,
         MessageSquare,
         Moon,
+        Music,
         Package,
         Phone,
         PhoneCall,
@@ -71,6 +77,8 @@ export const appConfig: ApplicationConfig = {
         PhoneOff,
         Plus,
         PlusCircle,
+        Presentation,
+        RefreshCw,
         Rocket,
         Save,
         Search,
@@ -96,6 +104,7 @@ export const appConfig: ApplicationConfig = {
         UserCog,
         Users,
         UserX,
+        Video,
         Wallet,
         X,
         XCircle,

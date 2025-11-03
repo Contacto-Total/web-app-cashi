@@ -5,6 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { HeaderConfigurationService } from '../../../maintenance/services/header-configuration.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
+import { ImportConfigService } from '../../services/import-config.service';
 import { HeaderConfiguration } from '../../../maintenance/models/header-configuration.model';
 import { SubPortfolio, Portfolio } from '../../../maintenance/models/portfolio.model';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -85,12 +86,227 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
         </div>
 
         @if (selectedSubPortfolioId > 0 && headersAreSaved()) {
+
+          <!-- Configuración Automática (Collapsible) -->
+          <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4">
+            <button (click)="showAutoConfig = !showAutoConfig"
+                    class="w-full flex items-center justify-between text-left">
+              <div class="flex items-center gap-2">
+                <lucide-angular [name]="showAutoConfig ? 'chevron-down' : 'chevron-right'"
+                                [size]="16"
+                                class="text-blue-400">
+                </lucide-angular>
+                <lucide-angular name="zap" [size]="16" class="text-blue-400"></lucide-angular>
+                <h3 class="text-sm font-bold text-white">Configuración Automática</h3>
+                <span class="text-xs px-2 py-0.5 rounded"
+                      [class]="autoImportConfig.active ? 'bg-green-900/30 text-green-400' : 'bg-gray-700 text-gray-400'">
+                  {{ autoImportConfig.active ? 'Activa' : 'Inactiva' }}
+                </span>
+              </div>
+              <span class="text-xs text-gray-400">{{ showAutoConfig ? 'Ocultar' : 'Mostrar' }}</span>
+            </button>
+
+            @if (showAutoConfig) {
+              <div class="mt-4 pt-4 border-t border-slate-700 space-y-3">
+                <p class="text-xs text-gray-400">
+                  Configura el sistema para procesar automáticamente archivos que coincidan con un patrón
+                </p>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <!-- Patrón de archivo -->
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">
+                      Patrón de archivo
+                    </label>
+                    <input type="text"
+                           [(ngModel)]="autoImportConfig.filePattern"
+                           placeholder="Ej: Cartera_CONTACTO_TOTAL"
+                           class="w-full px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-white text-xs placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    <p class="text-xs text-gray-500 mt-0.5">Archivos que contengan este texto</p>
+                  </div>
+
+                  <!-- Frecuencia -->
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">
+                      Revisar cada
+                    </label>
+                    <select [(ngModel)]="autoImportConfig.checkFrequencyMinutes"
+                            class="w-full px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+                      <option [value]="0">5 segundos (Testing)</option>
+                      <option [value]="1">1 minuto</option>
+                      <option [value]="5">5 minutos</option>
+                      <option [value]="15">15 minutos</option>
+                      <option [value]="30">30 minutos</option>
+                      <option [value]="60">1 hora</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Directorio -->
+                <div>
+                  <label class="block text-xs font-semibold text-gray-300 mb-1">
+                    Carpeta a monitorear
+                  </label>
+                  <div class="flex gap-2">
+                    <input type="text"
+                           [(ngModel)]="autoImportConfig.watchDirectory"
+                           placeholder="Ej: G:\\Mi unidad\\Cashi\\Cargas Diarias"
+                           class="flex-1 px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-white text-xs placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    <label class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs font-semibold cursor-pointer flex items-center gap-1 transition-colors">
+                      <lucide-angular name="folder-open" [size]="12"></lucide-angular>
+                      Examinar
+                      <input type="file"
+                             webkitdirectory
+                             directory
+                             multiple
+                             (change)="onFolderSelected($event)"
+                             class="hidden">
+                    </label>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-0.5">Escribe la ruta o examina para seleccionarla</p>
+                </div>
+
+                <!-- Archivo a procesar -->
+                @if (autoImportConfig.watchDirectory && autoImportConfig.filePattern) {
+                  <div class="p-2 bg-slate-900/50 border border-slate-600 rounded">
+                    <div class="flex items-center justify-between">
+                      <p class="text-xs font-semibold text-gray-300">Próximo archivo:</p>
+                      <button (click)="scanFolder()"
+                              class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs flex items-center gap-1 transition-colors">
+                        <lucide-angular name="search" [size]="10"></lucide-angular>
+                        Buscar
+                      </button>
+                    </div>
+
+                    @if (scanningFolder()) {
+                      <div class="flex items-center gap-2 mt-2 p-2 bg-slate-800 rounded">
+                        <div class="animate-spin w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                        <span class="text-xs text-gray-400">Buscando...</span>
+                      </div>
+                    } @else if (foundFiles().length > 0) {
+                      <div class="flex items-center justify-between mt-2 p-2 bg-green-900/20 border border-green-700/50 rounded">
+                        <div class="flex items-center gap-2 flex-1 min-w-0">
+                          <lucide-angular name="file-text" [size]="12" class="text-green-400 flex-shrink-0"></lucide-angular>
+                          <span class="text-xs text-white font-semibold truncate">{{ foundFiles()[0].name }}</span>
+                        </div>
+                        <span class="text-xs text-gray-400 ml-2">{{ foundFiles()[0].size }}</span>
+                      </div>
+                    } @else {
+                      <p class="text-xs text-gray-500 mt-2">Click "Buscar" para verificar</p>
+                    }
+                  </div>
+                }
+
+                <!-- Botones -->
+                <div class="flex items-center justify-between pt-2">
+                  <div class="flex items-center gap-2">
+                    <input type="checkbox"
+                           [(ngModel)]="autoImportConfig.active"
+                           id="autoActive"
+                           class="w-3.5 h-3.5 text-blue-600 bg-slate-900 border-slate-600 rounded focus:ring-blue-500">
+                    <label for="autoActive" class="text-xs text-gray-300 cursor-pointer">
+                      Activar procesamiento automático
+                    </label>
+                  </div>
+                  <button (click)="saveAutoConfig()"
+                          class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-colors">
+                    Guardar
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Historial de Cargas Automáticas (Collapsible) -->
+          @if (autoImportConfig.active || autoImportHistory().length > 0) {
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4">
+              <button (click)="showHistory = !showHistory"
+                      class="w-full flex items-center justify-between text-left">
+                <div class="flex items-center gap-2">
+                  <lucide-angular [name]="showHistory ? 'chevron-down' : 'chevron-right'"
+                                  [size]="16"
+                                  class="text-green-400">
+                  </lucide-angular>
+                  <lucide-angular name="history" [size]="16" class="text-green-400"></lucide-angular>
+                  <h3 class="text-sm font-bold text-white">Historial de Cargas Automáticas</h3>
+                  @if (autoImportHistory().length > 0) {
+                    <span class="text-xs px-2 py-0.5 bg-slate-700 text-gray-300 rounded">
+                      {{ autoImportHistory().length }}
+                    </span>
+                  }
+                  @if (autoImportConfig.active) {
+                    <span class="text-xs px-2 py-0.5 bg-green-900/30 text-green-400 rounded animate-pulse">
+                      Monitoreando
+                    </span>
+                  }
+                </div>
+                <div class="flex items-center gap-2">
+                  @if (showHistory) {
+                    <button (click)="refreshHistory(); $event.stopPropagation()"
+                            class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs flex items-center gap-1 transition-colors">
+                      <lucide-angular name="refresh-cw" [size]="12"></lucide-angular>
+                      Actualizar
+                    </button>
+                  }
+                  <span class="text-xs text-gray-400">{{ showHistory ? 'Ocultar' : 'Mostrar' }}</span>
+                </div>
+              </button>
+
+              @if (showHistory) {
+                <div class="mt-3 pt-3 border-t border-slate-700">
+                  @if (autoImportHistory().length === 0) {
+                    <div class="text-center py-6 text-gray-500">
+                      <lucide-angular name="inbox" [size]="24" class="mx-auto mb-2 text-gray-600"></lucide-angular>
+                      <p class="text-xs">No hay cargas automáticas registradas aún</p>
+                      @if (autoImportConfig.active) {
+                        <p class="text-xs mt-1">El sistema está monitoreando la carpeta configurada</p>
+                      }
+                    </div>
+                  } @else {
+                    <div class="space-y-2 max-h-64 overflow-y-auto">
+                      @for (item of autoImportHistory(); track item.id) {
+                        <div [class]="item.status === 'SUCCESS' ? 'bg-green-900/10 border-green-700/30' : 'bg-red-900/10 border-red-700/30'"
+                             class="border rounded-lg p-3">
+                          <div class="flex items-start gap-2">
+                            <lucide-angular [name]="item.status === 'SUCCESS' ? 'check-circle' : 'x-circle'"
+                                            [size]="14"
+                                            [class]="item.status === 'SUCCESS' ? 'text-green-400' : 'text-red-400'"
+                                            class="flex-shrink-0 mt-0.5">
+                            </lucide-angular>
+                            <div class="flex-1 min-w-0">
+                              <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs font-semibold text-white truncate">{{ item.fileName }}</span>
+                                <span class="text-xs text-gray-400 whitespace-nowrap">{{ formatHistoryDate(item.processedAt) }}</span>
+                              </div>
+                              @if (item.status === 'SUCCESS') {
+                                <p class="text-xs text-green-400 mt-1">
+                                  ✅ {{ item.recordsProcessed }} registros importados exitosamente
+                                </p>
+                              } @else {
+                                <p class="text-xs text-red-400 mt-1">
+                                  ❌ {{ item.errorMessage }}
+                                </p>
+                              }
+                              <p class="text-xs text-gray-500 mt-0.5 truncate" [title]="item.filePath">
+                                📁 {{ item.filePath }}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
           <!-- Área de carga de datos -->
           <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
             <!-- Header y Botones de acción -->
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div>
-                <h2 class="text-xl font-bold text-white">Importación de Datos</h2>
+                <h2 class="text-xl font-bold text-white">Importación Manual</h2>
                 <p class="text-gray-400 text-sm mt-1">
                   Sube un archivo Excel con los datos para esta subcartera
                 </p>
@@ -342,14 +558,39 @@ export class DailyLoadComponent implements OnInit {
   invalidData = signal<{error: string, data: any}[]>([]);
   backendErrors = signal<string[]>([]);
 
+  // Auto import configuration
+  showAutoConfig = false;
+  showHistory = false;
+  autoImportConfig = {
+    watchDirectory: '',
+    filePattern: '',
+    checkFrequencyMinutes: 15,
+    active: false
+  };
+
+  autoImportHistory = signal<{
+    id: number;
+    fileName: string;
+    filePath: string;
+    processedAt: string;
+    status: 'SUCCESS' | 'ERROR';
+    recordsProcessed: number;
+    errorMessage?: string;
+  }[]>([]);
+
+  scanningFolder = signal(false);
+  foundFiles = signal<{ name: string; size: string; modifiedDate: Date; processed: boolean }[]>([]);
+
   constructor(
     private tenantService: TenantService,
     private portfolioService: PortfolioService,
-    private headerConfigService: HeaderConfigurationService
+    private headerConfigService: HeaderConfigurationService,
+    private importConfigService: ImportConfigService
   ) {}
 
   ngOnInit() {
     this.loadTenants();
+    this.loadAutoConfig();
   }
 
   loadTenants() {
@@ -1025,5 +1266,236 @@ export class DailyLoadComponent implements OnInit {
         }
       }
     });
+  }
+
+  onFolderSelected(event: any) {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      // Obtener la ruta del primer archivo y extraer el directorio
+      const firstFile = files[0];
+      const fullPath = firstFile.webkitRelativePath || firstFile.name;
+
+      // Extraer solo el nombre de la carpeta principal
+      const folderName = fullPath.split('/')[0];
+
+      // En navegadores, no podemos obtener la ruta completa por seguridad
+      // Mostrar un mensaje al usuario
+      const confirmed = confirm(
+        `Has seleccionado la carpeta: "${folderName}"\n\n` +
+        `Por motivos de seguridad del navegador, necesitas escribir la ruta completa manualmente.\n\n` +
+        `Ejemplo: G:\\Mi unidad\\Cashi\\Cargas Diarias\\${folderName}\n\n` +
+        `¿Deseas copiar el nombre de la carpeta para usarlo?`
+      );
+
+      if (confirmed) {
+        // Si el usuario ya tiene algo escrito, agregar el folder al final
+        if (this.autoImportConfig.watchDirectory) {
+          this.autoImportConfig.watchDirectory += `\\${folderName}`;
+        } else {
+          this.autoImportConfig.watchDirectory = folderName;
+        }
+      }
+    }
+
+    // Limpiar el input
+    event.target.value = '';
+  }
+
+  loadAutoConfig() {
+    this.importConfigService.getConfig().subscribe({
+      next: (config) => {
+        this.autoImportConfig = {
+          watchDirectory: config.watchDirectory || '',
+          filePattern: config.filePattern || '',
+          checkFrequencyMinutes: config.checkFrequencyMinutes || 15,
+          active: config.active || false
+        };
+
+        if (this.autoImportConfig.active) {
+          this.loadAutoImportHistory();
+        }
+      },
+      error: (error) => {
+        console.error('Error cargando configuración:', error);
+      }
+    });
+  }
+
+  async saveAutoConfig() {
+    if (!this.selectedSubPortfolioId) {
+      alert('⚠️ Debes seleccionar una Subcartera antes de configurar la importación automática');
+      return;
+    }
+    if (!this.autoImportConfig.watchDirectory) {
+      alert('Por favor ingresa la carpeta a monitorear');
+      return;
+    }
+    if (!this.autoImportConfig.filePattern) {
+      alert('Por favor ingresa el patrón de archivo');
+      return;
+    }
+
+    // Si se va a activar, validar cabeceras
+    if (this.autoImportConfig.active) {
+      // Verificar que hay cabeceras configuradas
+      if (this.previewHeaders().length === 0) {
+        alert('⚠️ No hay cabeceras configuradas para esta subcartera.\n\nDebes configurar las cabeceras primero en el módulo de Mantenimiento.');
+        this.autoImportConfig.active = false;
+        return;
+      }
+
+      // Verificar que hay un archivo para validar
+      if (this.foundFiles().length === 0) {
+        const confirmar = confirm('⚠️ No has verificado qué archivos existen en la carpeta.\n\n¿Deseas activar el procesamiento automático sin validar el archivo?');
+        if (!confirmar) {
+          this.autoImportConfig.active = false;
+          return;
+        }
+      } else {
+        // Validar cabeceras del archivo
+        const validacion = await this.validateFileHeaders(this.foundFiles()[0].name);
+        if (!validacion.valido) {
+          alert('❌ Error de validación de cabeceras:\n\n' + validacion.mensaje);
+          this.autoImportConfig.active = false;
+          return;
+        }
+      }
+    }
+
+    const configToSave = {
+      watchDirectory: this.autoImportConfig.watchDirectory,
+      filePattern: this.autoImportConfig.filePattern,
+      subPortfolioId: this.selectedSubPortfolioId,
+      checkFrequencyMinutes: this.autoImportConfig.checkFrequencyMinutes,
+      active: this.autoImportConfig.active,
+      processedDirectory: this.autoImportConfig.watchDirectory + '\\Procesados',
+      errorDirectory: this.autoImportConfig.watchDirectory + '\\Errores',
+      moveAfterProcess: true
+    };
+
+    this.importConfigService.saveConfig(configToSave).subscribe({
+      next: (saved) => {
+        const frecuenciaTexto = saved.checkFrequencyMinutes === 0
+          ? '5 segundos (Testing)'
+          : `${saved.checkFrequencyMinutes} minuto${saved.checkFrequencyMinutes === 1 ? '' : 's'}`;
+
+        alert('✅ Configuración guardada exitosamente.\n\n' +
+              `Patrón: ${saved.filePattern}\n` +
+              `Carpeta: ${saved.watchDirectory}\n` +
+              `Frecuencia: Cada ${frecuenciaTexto}\n` +
+              `Estado: ${saved.active ? 'ACTIVA - El sistema está monitoreando' : 'Inactiva'}`);
+
+        if (saved.active) {
+          this.loadAutoImportHistory();
+        }
+      },
+      error: (error) => {
+        console.error('Error guardando configuración:', error);
+        alert('❌ Error al guardar la configuración: ' + (error.error?.error || error.message));
+      }
+    });
+  }
+
+  async validateFileHeaders(fileName: string): Promise<{valido: boolean, mensaje: string}> {
+    try {
+      // Construct full file path
+      const filePath = `${this.autoImportConfig.watchDirectory}\\${fileName}`;
+
+      // Determine load type based on current tab or configuration
+      // For now, defaulting to ACTUALIZACION (daily load)
+      const loadType = 'ACTUALIZACION';
+
+      // Call backend validation
+      const result = await this.importConfigService.validateHeaders(
+        filePath,
+        this.selectedSubPortfolioId,
+        loadType
+      ).toPromise();
+
+      if (!result) {
+        return {
+          valido: false,
+          mensaje: 'No se recibió respuesta del servidor'
+        };
+      }
+
+      return {
+        valido: result.valid,
+        mensaje: result.message
+      };
+    } catch (error: any) {
+      return {
+        valido: false,
+        mensaje: 'Error al validar cabeceras: ' + (error.message || error)
+      };
+    }
+  }
+
+  loadAutoImportHistory() {
+    this.importConfigService.getHistory(this.selectedSubPortfolioId).subscribe({
+      next: (history) => {
+        this.autoImportHistory.set(history);
+      },
+      error: (error) => {
+        console.error('Error cargando historial:', error);
+      }
+    });
+  }
+
+  refreshHistory() {
+    console.log('Refrescando historial...');
+    this.loadAutoImportHistory();
+  }
+
+  scanFolder() {
+    if (!this.autoImportConfig.watchDirectory || !this.autoImportConfig.filePattern) {
+      return;
+    }
+
+    this.scanningFolder.set(true);
+
+    this.importConfigService.scanFolder(
+      this.autoImportConfig.watchDirectory,
+      this.autoImportConfig.filePattern
+    ).subscribe({
+      next: (files) => {
+        const mappedFiles = files.map(f => ({
+          name: f.name,
+          size: f.size,
+          modifiedDate: new Date(f.modifiedDate),
+          processed: f.processed
+        }));
+
+        this.foundFiles.set(mappedFiles);
+        this.scanningFolder.set(false);
+      },
+      error: (error) => {
+        console.error('Error escaneando carpeta:', error);
+        alert('❌ Error al escanear la carpeta: ' + (error.error?.error || error.message));
+        this.scanningFolder.set(false);
+        this.foundFiles.set([]);
+      }
+    });
+  }
+
+  formatHistoryDate(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / 3600000);
+
+    if (diffHours < 1) {
+      const diffMinutes = Math.floor(diffMs / 60000);
+      return `Hace ${diffMinutes} min`;
+    } else if (diffHours < 24) {
+      return `Hace ${diffHours}h`;
+    } else {
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
   }
 }
