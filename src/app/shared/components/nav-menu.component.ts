@@ -121,6 +121,22 @@ import { ThemeService } from '../services/theme.service';
                     <span class="text-gray-300 group-hover:text-white font-medium text-sm">Config. Cabeceras</span>
                   </a>
 
+                  <!-- Roles -->
+                  <a routerLink="/maintenance/roles"
+                     (click)="closeMenus()"
+                     class="flex items-center gap-2 px-3 py-2 hover:bg-slate-700 transition-colors group">
+                    <lucide-angular name="shield-check" [size]="16" class="text-gray-400 group-hover:text-purple-400"></lucide-angular>
+                    <span class="text-gray-300 group-hover:text-white font-medium text-sm">Roles</span>
+                  </a>
+
+                  <!-- Usuarios -->
+                  <a routerLink="/maintenance/users"
+                     (click)="closeMenus()"
+                     class="flex items-center gap-2 px-3 py-2 hover:bg-slate-700 transition-colors group">
+                    <lucide-angular name="users" [size]="16" class="text-gray-400 group-hover:text-blue-400"></lucide-angular>
+                    <span class="text-gray-300 group-hover:text-white font-medium text-sm">Usuarios</span>
+                  </a>
+
                   <!-- Blacklist -->
                   <a routerLink="/maintenance/blacklist"
                      (click)="closeMenus()"

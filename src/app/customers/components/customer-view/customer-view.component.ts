@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { CustomerService, CustomerResource } from '../../services/customer.service';
+import { ApiSystemConfigService } from '../../../collection-management/services/api-system-config.service';
+import { ManagementService, CreateManagementRequest } from '../../../collection-management/services/management.service';
 
 @Component({
   selector: 'app-customer-view',
@@ -239,11 +241,21 @@ import { CustomerService, CustomerResource } from '../../services/customer.servi
               </div>
             </div>
 
-            <button (click)="clearCustomer()"
-                    class="w-full px-3 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 text-sm shadow-lg hover:shadow-blue-600/50">
-              <lucide-angular name="search" [size]="16"></lucide-angular>
-              <span>Buscar Otro Cliente</span>
-            </button>
+            <!-- Botones de Acción -->
+            <div class="space-y-2">
+              <!-- Botón Nueva Gestión -->
+              <button (click)="openNewManagement()"
+                      class="w-full px-3 py-2.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 text-sm shadow-lg hover:shadow-green-600/50">
+                <lucide-angular name="plus-circle" [size]="16"></lucide-angular>
+                <span>Nueva Gestión</span>
+              </button>
+
+              <button (click)="clearCustomer()"
+                      class="w-full px-3 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 text-sm shadow-lg hover:shadow-blue-600/50">
+                <lucide-angular name="search" [size]="16"></lucide-angular>
+                <span>Buscar Otro Cliente</span>
+              </button>
+            </div>
           </div>
 
           <!-- Main Content - Compact Table View -->
@@ -583,6 +595,114 @@ import { CustomerService, CustomerResource } from '../../services/customer.servi
           </div>
         </div>
       }
+
+      <!-- Modal Nueva Gestión -->
+      @if (showManagementModal()) {
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" (click)="closeManagementModal()">
+          <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-slate-700" (click)="$event.stopPropagation()">
+
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between border-b border-blue-500">
+              <div class="flex items-center gap-3">
+                <div class="p-2 bg-white/20 rounded-lg">
+                  <lucide-angular name="file-text" [size]="24" class="text-white"></lucide-angular>
+                </div>
+                <div>
+                  <h2 class="text-xl font-bold text-white">Nueva Gestión</h2>
+                  <p class="text-sm text-blue-100">{{ customer()?.fullName }}</p>
+                </div>
+              </div>
+              <button (click)="closeManagementModal()" class="p-2 hover:bg-white/20 rounded-lg transition-colors">
+                <lucide-angular name="x" [size]="24" class="text-white"></lucide-angular>
+              </button>
+            </div>
+
+            <!-- Form Content -->
+            <div class="p-4 overflow-y-auto max-h-[calc(90vh-180px)]">
+              <div class="space-y-3">
+
+                <!-- Tipificaciones Jerárquicas -->
+                @for (level of hierarchyLevels(); track $index; let levelIndex = $index) {
+                  <div class="space-y-1.5">
+                    <label class="flex items-center gap-2 text-xs font-semibold text-gray-300">
+                      @if (levelIndex === 0) {
+                        <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                      } @else {
+                        <span class="w-1.5 h-1.5 bg-cyan-400 rounded-full"></span>
+                      }
+                      {{ getLevelLabel(levelIndex) }}
+                      @if (levelIndex === 0) {
+                        <span class="text-red-400">*</span>
+                      }
+                    </label>
+                    <select
+                      [value]="selectedClassifications()[levelIndex] || ''"
+                      (change)="onClassificationSelect(levelIndex, $any($event.target).value)"
+                      class="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer">
+                      <option value="">Seleccione una opción...</option>
+                      @for (item of level; track item.id) {
+                        <option [value]="item.id">{{ getTypificationLabel(item) }}</option>
+                      }
+                    </select>
+                  </div>
+                }
+
+                <!-- Observaciones -->
+                <div class="space-y-1.5">
+                  <label class="flex items-center gap-2 text-xs font-semibold text-gray-300">
+                    <lucide-angular name="message-square" [size]="12" class="text-gray-400"></lucide-angular>
+                    Observaciones
+                  </label>
+                  <textarea
+                    [(ngModel)]="managementForm.observations"
+                    placeholder="Detalles de la conversación..."
+                    rows="3"
+                    class="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none">
+                  </textarea>
+                </div>
+
+                <!-- Notas Privadas -->
+                <div class="space-y-1.5">
+                  <label class="flex items-center gap-2 text-xs font-semibold text-gray-300">
+                    <lucide-angular name="lock" [size]="12" class="text-orange-400"></lucide-angular>
+                    Notas Privadas
+                  </label>
+                  <textarea
+                    [(ngModel)]="managementForm.privateNotes"
+                    placeholder="Notas internas..."
+                    rows="2"
+                    class="w-full px-3 py-2 bg-slate-800 border border-orange-600/30 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all resize-none">
+                  </textarea>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="px-4 py-3 bg-slate-900/50 border-t border-slate-700 flex gap-2">
+              <button
+                (click)="saveManagement()"
+                [disabled]="!isManagementFormValid() || savingManagement()"
+                class="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-blue-600/50 text-sm">
+                @if (savingManagement()) {
+                  <lucide-angular name="loader" [size]="18" class="animate-spin"></lucide-angular>
+                } @else {
+                  <lucide-angular name="save" [size]="18"></lucide-angular>
+                }
+                <span>{{ savingManagement() ? 'Guardando...' : 'Guardar Gestión' }}</span>
+              </button>
+              <button
+                (click)="closeManagementModal()"
+                [disabled]="savingManagement()"
+                class="px-4 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+                <lucide-angular name="x" [size]="18"></lucide-angular>
+                <span>Cancelar</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -593,6 +713,8 @@ import { CustomerService, CustomerResource } from '../../services/customer.servi
 })
 export class CustomerViewComponent implements OnInit {
   private customerService = inject(CustomerService);
+  private apiSystemConfigService = inject(ApiSystemConfigService);
+  private managementService = inject(ManagementService);
 
   customer = signal<CustomerResource | null>(null);
   activeTab = signal<'personal' | 'contacto' | 'ubicacion' | 'referencias' | 'cuentas'>('cuentas');
@@ -614,6 +736,45 @@ export class CustomerViewComponent implements OnInit {
     { value: 'numero_cuenta', label: 'Número de Cuenta', icon: 'credit-card' },
     { value: 'telefono', label: 'Teléfono', icon: 'phone' }
   ];
+
+  // Modal de Nueva Gestión
+  showManagementModal = signal(false);
+  savingManagement = signal(false);
+
+  // Tipificaciones
+  managementClassifications = computed(() => this.apiSystemConfigService.getManagementClassificationsForUI());
+  selectedClassifications = signal<string[]>([]);
+
+  // Formulario de gestión
+  managementForm = {
+    observations: '',
+    privateNotes: ''
+  };
+
+  hierarchyLevels = computed(() => {
+    const all: any[] = this.managementClassifications() as any[];
+    const selected = this.selectedClassifications();
+    const levels: any[][] = [];
+
+    const roots = all.filter(c => c.hierarchyLevel === 1 || !c.parentId);
+
+    if (roots.length > 0) {
+      levels.push(roots);
+
+      for (let i = 0; i < selected.length; i++) {
+        const parentId = selected[i];
+        const children = all.filter(c => c.parentId && Number(c.parentId) === Number(parentId));
+
+        if (children.length > 0) {
+          levels.push(children);
+        } else {
+          break;
+        }
+      }
+    }
+
+    return levels;
+  });
 
   ngOnInit() {
     // Cargar clientes recientes al iniciar
@@ -926,5 +1087,177 @@ export class CustomerViewComponent implements OnInit {
     if (!customer || !customer.contactMethods) return null;
     const emailContact = customer.contactMethods.find(cm => cm.contactType === 'email');
     return emailContact ? emailContact.value : null;
+  }
+
+  /**
+   * Abre el formulario para crear una nueva gestión
+   */
+  openNewManagement() {
+    const currentCustomer = this.customer();
+    if (!currentCustomer) return;
+
+    console.log('Nueva gestión para cliente:', currentCustomer.id);
+
+    // Cargar tipificaciones según el tenantId del cliente
+    const tenantId = currentCustomer.tenantId || 1;
+    this.apiSystemConfigService.setTenantAndPortfolio(tenantId, currentCustomer.portfolioId);
+
+    // Resetear formulario
+    this.selectedClassifications.set([]);
+    this.managementForm = {
+      observations: '',
+      privateNotes: ''
+    };
+
+    // Mostrar modal
+    this.showManagementModal.set(true);
+  }
+
+  /**
+   * Cierra el modal de gestión
+   */
+  closeManagementModal() {
+    this.showManagementModal.set(false);
+  }
+
+  /**
+   * Maneja la selección de una tipificación en un nivel
+   */
+  onClassificationSelect(levelIndex: number, selectedId: string) {
+    const currentSelections = [...this.selectedClassifications()];
+
+    // Truncar selecciones desde el nivel actual
+    currentSelections.length = levelIndex;
+
+    // Agregar nueva selección
+    if (selectedId) {
+      currentSelections.push(selectedId);
+    }
+
+    this.selectedClassifications.set(currentSelections);
+  }
+
+  /**
+   * Obtiene la etiqueta formateada de una tipificación
+   */
+  getTypificationLabel(item: any): string {
+    return `[${item.codigo}] ${item.label}`;
+  }
+
+  /**
+   * Obtiene el label del nivel actual
+   */
+  getLevelLabel(levelIndex: number): string {
+    if (levelIndex === 0) return 'Tipo de Resultado';
+
+    const selected = this.selectedClassifications();
+    if (!selected[levelIndex - 1]) return `Nivel ${levelIndex + 1}`;
+
+    const parentId = selected[levelIndex - 1];
+    const parent = this.managementClassifications().find((c: any) => c.id.toString() === parentId);
+
+    if (!parent) return `Nivel ${levelIndex + 1}`;
+
+    if (levelIndex === 1) {
+      const labelMap: Record<string, string> = {
+        'RP': 'Intención de Pago',
+        'CSA': 'Motivo de No Atención',
+        'SC': 'Razón de No Contacto',
+        'GA': 'Tipo de Gestión'
+      };
+      return labelMap[parent.codigo] || `Detalle de ${parent.label}`;
+    }
+
+    if (levelIndex === 2) {
+      return `Detalle de ${parent.label}`;
+    }
+
+    return `Nivel ${levelIndex + 1}`;
+  }
+
+  /**
+   * Verifica si el formulario es válido
+   */
+  isManagementFormValid(): boolean {
+    const selected = this.selectedClassifications();
+
+    if (selected.length === 0) {
+      return false;
+    }
+
+    // Verificar que no haya más niveles disponibles
+    const lastSelectedId = selected[selected.length - 1];
+    const all: any[] = this.managementClassifications() as any[];
+    const hasChildren = all.some((c: any) => c.parentId && Number(c.parentId) === Number(lastSelectedId));
+
+    return !hasChildren;
+  }
+
+  /**
+   * Guarda la gestión
+   */
+  saveManagement() {
+    if (!this.isManagementFormValid()) {
+      alert('Por favor complete todos los campos requeridos');
+      return;
+    }
+
+    const currentCustomer = this.customer();
+    if (!currentCustomer) return;
+
+    this.savingManagement.set(true);
+
+    // Obtener las tipificaciones seleccionadas
+    const selectedClassifs = this.selectedClassifications();
+    const allTypifications = this.managementClassifications();
+
+    const level1 = allTypifications.find((c: any) => c.id.toString() === selectedClassifs[0]);
+    const level2 = selectedClassifs[1] ? allTypifications.find((c: any) => c.id.toString() === selectedClassifs[1]) : null;
+    const level3 = selectedClassifs[2] ? allTypifications.find((c: any) => c.id.toString() === selectedClassifs[2]) : null;
+
+    // Determinar cuál es la tipificación final (hoja)
+    const lastSelectedId = selectedClassifs[selectedClassifs.length - 1];
+    const managementClassification = allTypifications.find((c: any) => c.id.toString() === lastSelectedId);
+
+    // Crear el request
+    const request: CreateManagementRequest = {
+      customerId: currentCustomer.customerId || currentCustomer.id.toString(),
+      advisorId: 'ADV-001', // TODO: Obtener del contexto del usuario
+
+      // Multi-tenant fields
+      tenantId: currentCustomer.tenantId || 1,
+      portfolioId: currentCustomer.portfolioId || 1,
+      subPortfolioId: currentCustomer.subPortfolioId || 1,
+
+      // Phone from customer data
+      phone: this.getPhoneContactMethods()[0]?.value || '',
+
+      // Hierarchy levels with IDs and names
+      level1Id: Number(selectedClassifs[0]),
+      level1Name: level1?.label || '',
+      level2Id: selectedClassifs[1] ? Number(selectedClassifs[1]) : null,
+      level2Name: level2?.label || null,
+      level3Id: selectedClassifs[2] ? Number(selectedClassifs[2]) : null,
+      level3Name: level3?.label || null,
+
+      // Additional fields
+      observations: this.managementForm.observations
+    };
+
+    console.log('Guardando gestión:', request);
+
+    this.managementService.createManagement(request).subscribe({
+      next: (response) => {
+        console.log('Gestión guardada exitosamente:', response);
+        this.savingManagement.set(false);
+        this.showManagementModal.set(false);
+        alert('Gestión guardada exitosamente');
+      },
+      error: (error) => {
+        console.error('Error guardando gestión:', error);
+        this.savingManagement.set(false);
+        alert('Error guardando gestión. Por favor intente nuevamente.');
+      }
+    });
   }
 }

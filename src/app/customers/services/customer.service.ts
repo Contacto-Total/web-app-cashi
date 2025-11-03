@@ -98,11 +98,13 @@ export interface CustomerResource {
   // Métodos de contacto
   contactMethods?: ContactMethodResource[];
   // Información de subcartera
+  tenantId?: number;
+  tenantName?: string;
+  portfolioId?: number;
+  portfolioName?: string;
   subPortfolioId?: number;
   subPortfolioName?: string;
   subPortfolioCode?: string;
-  portfolioName?: string;
-  tenantName?: string;
 }
 
 @Injectable({

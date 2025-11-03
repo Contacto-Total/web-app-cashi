@@ -24,6 +24,7 @@ import { DynamicFieldRendererComponent } from '../components/dynamic-field-rende
 import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-config.model';
 import { CustomerOutputConfigService } from '../../maintenance/services/customer-output-config.service';
 import { PaymentScheduleViewComponent } from '../components/payment-schedule-view/payment-schedule-view.component';
+import { CustomerService } from '../../customers/services/customer.service';
 
 @Component({
   selector: 'app-collection-management',
@@ -139,6 +140,20 @@ import { PaymentScheduleViewComponent } from '../components/payment-schedule-vie
               </option>
             </select>
           }
+
+          <input
+            type="text"
+            [(ngModel)]="testDocument"
+            (keyup.enter)="searchByTestDocument()"
+            placeholder="Documento..."
+            class="text-[10px] font-semibold text-gray-900 bg-white border-2 border-yellow-500 rounded px-2 py-1 w-28 shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+
+          <input
+            type="text"
+            [(ngModel)]="testPhone"
+            (keyup.enter)="searchByTestPhone()"
+            placeholder="Teléfono..."
+            class="text-[10px] font-semibold text-gray-900 bg-white border-2 border-yellow-500 rounded px-2 py-1 w-28 shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
         </div>
       }
 
@@ -803,6 +818,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   tenants: Tenant[] = [];
   portfolios: Portfolio[] = [];
 
+  // Testing fields
+  testDocument = '';
+  testPhone = '';
+
   // Configuración de outputs del cliente
   customerOutputFields = signal<any[]>([]);
 
@@ -1070,6 +1089,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private classificationService: TypificationService,
     private apiSystemConfigService: ApiSystemConfigService,
     private customerOutputConfigService: CustomerOutputConfigService,
+    private customerService: CustomerService,
     private router: Router,
     private http: HttpClient
   ) {}
@@ -1295,8 +1315,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   loadManagementHistory() {
-    const customerId = this.customerData().id_cliente;
-    console.log('[HISTORIAL] Cargando historial para cliente:', customerId);
+    const customerId = String(this.customerData().id);
+    console.log('[HISTORIAL] Cargando historial para cliente ID:', customerId);
 
     this.managementService.getManagementsByCustomer(customerId).subscribe({
       next: (managements) => {
@@ -1305,9 +1325,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
         // Mapear gestiones y cargar cronogramas
         const historial = managements.map(m => {
+          // Formatear fecha y hora desde los campos de la gestión
+          const fechaHora = m.managementDate && m.managementTime
+            ? `${m.managementDate} ${m.managementTime}`
+            : new Date().toLocaleString('es-PE');
+
           const historyItem = {
             id: m.id,
-            fecha: new Date().toLocaleString('es-PE'), // TEMPORAL: No hay fecha de gestión en el nuevo modelo
+            fecha: fechaHora,
             asesor: m.advisorId,
             resultado: 'Gestión realizada',
             gestion: m.level3Name || m.level2Name || m.level1Name || '-',
@@ -1592,8 +1617,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * Loads active payment schedules for the current customer
    */
   private loadActiveSchedules() {
-    const customerId = this.customerData().id_cliente;
-    console.log('[SCHEDULE] Loading active schedules for customer:', customerId);
+    const customerId = String(this.customerData().id);
+    console.log('[SCHEDULE] Loading active schedules for customer ID:', customerId);
 
     this.isLoadingSchedules.set(true);
     this.managementService.getActiveSchedulesByCustomer(customerId).subscribe({
@@ -2165,7 +2190,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
 
     const scheduleRequest: any = {
-      customerId: this.customerData().id_cliente,
+      customerId: String(this.customerData().id),
       managementId: managementId,
       scheduleType: this.scheduleForm.tipoCronograma,
       negotiatedAmount: this.scheduleForm.montoNegociado ? parseFloat(this.scheduleForm.montoNegociado) : null,
@@ -2399,7 +2424,110 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         row[column.id] = column.defaultValue || '';
       }
     });
-    
+
     return row;
+  }
+
+  /**
+   * Busca un cliente por documento de testing
+   */
+  searchByTestDocument() {
+    if (!this.testDocument.trim() || !this.selectedTenantId) {
+      console.warn('[TEST] Documento vacío o tenant no seleccionado');
+      return;
+    }
+
+    console.log('[TEST] Buscando cliente por documento:', this.testDocument);
+    this.customerService.searchCustomersByCriteria(this.selectedTenantId, 'documento', this.testDocument).subscribe({
+      next: (customers) => {
+        if (customers && customers.length > 0) {
+          console.log('[TEST] Cliente encontrado:', customers[0]);
+          this.loadCustomerFromResource(customers[0]);
+        } else {
+          console.warn('[TEST] No se encontró cliente con documento:', this.testDocument);
+          alert('No se encontró cliente con el documento: ' + this.testDocument);
+        }
+      },
+      error: (error) => {
+        console.error('[TEST] Error buscando cliente:', error);
+        alert('Error buscando cliente');
+      }
+    });
+  }
+
+  /**
+   * Busca un cliente por teléfono de testing
+   */
+  searchByTestPhone() {
+    if (!this.testPhone.trim() || !this.selectedTenantId) {
+      console.warn('[TEST] Teléfono vacío o tenant no seleccionado');
+      return;
+    }
+
+    console.log('[TEST] Buscando cliente por teléfono:', this.testPhone);
+    this.customerService.searchCustomersByCriteria(this.selectedTenantId, 'telefono', this.testPhone).subscribe({
+      next: (customers) => {
+        if (customers && customers.length > 0) {
+          console.log('[TEST] Cliente encontrado:', customers[0]);
+          this.loadCustomerFromResource(customers[0]);
+        } else {
+          console.warn('[TEST] No se encontró cliente con teléfono:', this.testPhone);
+          alert('No se encontró cliente con el teléfono: ' + this.testPhone);
+        }
+      },
+      error: (error) => {
+        console.error('[TEST] Error buscando cliente:', error);
+        alert('Error buscando cliente');
+      }
+    });
+  }
+
+  /**
+   * Carga un cliente desde un CustomerResource
+   * Similar a loadFirstCustomer pero reutilizable
+   */
+  private loadCustomerFromResource(customer: any) {
+    console.log('[TEST] Cargando cliente:', customer);
+
+    // Mapear CustomerResource a CustomerData
+    this.customerData.set({
+      id: customer.id,
+      id_cliente: customer.documentNumber || customer.identificationCode,
+      nombre_completo: customer.fullName || '',
+      tipo_documento: customer.documentType || 'DNI',
+      numero_documento: customer.documentNumber || '',
+      fecha_nacimiento: customer.birthDate || '',
+      edad: customer.age || null,
+      contacto: {
+        telefono_principal: customer.contactMethods?.find((cm: any) => cm.subtype === 'telefono_principal')?.value || '',
+        telefono_alternativo: customer.contactMethods?.find((cm: any) => cm.subtype === 'telefono_secundario')?.value || '',
+        telefono_trabajo: customer.contactMethods?.find((cm: any) => cm.subtype === 'telefono_trabajo')?.value || '',
+        email: customer.contactMethods?.find((cm: any) => cm.contactType === 'email')?.value || '',
+        direccion: customer.address || ''
+      },
+      cuenta: {
+        numero_cuenta: customer.accountNumber || '',
+        tipo_producto: 'PRÉSTAMO',
+        fecha_desembolso: '2024-01-15',
+        monto_original: customer.principalAmount || 0,
+        plazo_meses: 12,
+        tasa_interes: 2.5
+      },
+      deuda: {
+        saldo_capital: customer.principalAmount || 0,
+        intereses_vencidos: 0,
+        mora_acumulada: customer.overdueAmount || 0,
+        gastos_cobranza: 0,
+        saldo_total: (customer.principalAmount || 0) + (customer.overdueAmount || 0),
+        dias_mora: customer.overdueDays || 0,
+        fecha_ultimo_pago: '',
+        monto_ultimo_pago: 0
+      }
+    });
+
+    // Cargar historial de gestiones del cliente
+    this.loadManagementHistory();
+
+    console.log('[TEST] Cliente cargado exitosamente');
   }
 }

@@ -47,6 +47,14 @@ export const routes: Routes = [
     loadComponent: () => import('./maintenance/components/blacklist-maintenance/blacklist-maintenance.component').then(m => m.BlacklistMaintenanceComponent)
   },
   {
+    path: 'maintenance/roles',
+    loadComponent: () => import('./maintenance/components/roles-management/roles-management.component').then(m => m.RolesManagementComponent)
+  },
+  {
+    path: 'maintenance/users',
+    loadComponent: () => import('./maintenance/components/user-management/user-management.component').then(m => m.UserManagementComponent)
+  },
+  {
     path: 'data-load/initial',
     loadComponent: () => import('./data-load/components/initial-load/initial-load.component').then(m => m.InitialLoadComponent)
   },

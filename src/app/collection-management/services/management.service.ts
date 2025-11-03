@@ -31,6 +31,10 @@ export interface ManagementResource {
   observations?: string;
   typificationRequiresPayment?: boolean;
   typificationRequiresSchedule?: boolean;
+
+  // Automatic timestamp fields
+  managementDate?: string;  // Fecha de gestión (YYYY-MM-DD)
+  managementTime?: string;  // Hora de gestión (HH:mm:ss)
 }
 
 export interface CallDetailResource {
