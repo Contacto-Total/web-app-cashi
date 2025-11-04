@@ -151,10 +151,9 @@ import { Tenant } from '../../models/tenant.model';
                                   title="Editar">
                             <lucide-angular name="edit" [size]="16"></lucide-angular>
                           </button>
-                          <button (click)="deleteTenant(tenant)"
-                                  [disabled]="tenant.hasPortfolios"
+                          <button (click)="tenant.hasPortfolios ? showCannotDeleteMessage(tenant) : deleteTenant(tenant)"
                                   [class]="tenant.hasPortfolios ? 'text-gray-600 cursor-not-allowed' : 'text-red-400 hover:bg-slate-800 cursor-pointer'"
-                                  class="p-2 rounded-lg transition-colors disabled:opacity-50"
+                                  class="p-2 rounded-lg transition-colors"
                                   [title]="tenant.hasPortfolios ? 'No se puede eliminar: tiene carteras asociadas' : 'Eliminar'">
                             <lucide-angular name="trash-2" [size]="16"></lucide-angular>
                           </button>
@@ -291,6 +290,10 @@ export class TenantMaintenanceComponent implements OnInit {
     this.loading.set(true);
     this.typificationService.getAllTenants().subscribe({
       next: (tenants) => {
+        console.log('📋 Tenants loaded:', tenants);
+        tenants.forEach(t => {
+          console.log(`  - ${t.tenantName}: hasPortfolios=${t.hasPortfolios}, isActive=${t.isActive}`);
+        });
         this.tenants.set(tenants);
         this.filteredTenants.set(tenants);
         this.loading.set(false);
@@ -465,12 +468,11 @@ export class TenantMaintenanceComponent implements OnInit {
     }
   }
 
-  deleteTenant(tenant: Tenant) {
-    if (tenant.hasPortfolios) {
-      alert('No se puede eliminar este proveedor porque tiene carteras asociadas.');
-      return;
-    }
+  showCannotDeleteMessage(tenant: Tenant) {
+    alert(`No se puede eliminar el proveedor "${tenant.tenantName}" porque tiene carteras asociadas.`);
+  }
 
+  deleteTenant(tenant: Tenant) {
     if (confirm(`¿Está seguro de eliminar el proveedor "${tenant.tenantName}"? Esta acción no se puede deshacer.`)) {
       this.typificationService.deleteTenant(tenant.id).subscribe({
         next: () => {
@@ -479,7 +481,12 @@ export class TenantMaintenanceComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error deleting tenant:', error);
-          alert('Error al eliminar el proveedor');
+          if (error.status === 400 && error.error?.error) {
+            // Error de validación (ej: tiene carteras asociadas)
+            alert(error.error.error);
+          } else {
+            alert('Error al eliminar el proveedor');
+          }
         }
       });
     }

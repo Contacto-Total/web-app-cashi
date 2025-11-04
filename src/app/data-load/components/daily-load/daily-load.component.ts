@@ -617,7 +617,7 @@ export class DailyLoadComponent implements OnInit {
   autoImportConfig = {
     watchDirectory: '',
     filePattern: '',
-    active: false
+    active: true
   };
   scheduledTimeInput = '02:00'; // Input de hora en formato HH:mm
 
@@ -1536,15 +1536,18 @@ export class DailyLoadComponent implements OnInit {
           // Importación exitosa
           if (result.hasErrors) {
             // Exitosa pero con errores
+            const errorCount = result.errors?.length || 0;
             alert(
               `⚠️ Importación completada con advertencias\n\n` +
               `Archivo: ${result.fileName}\n` +
               `Registros insertados: ${result.insertedRows}\n` +
-              `Errores: ${result.errors.length}\n\n` +
-              `Revisa el log rojo para ver los detalles.`
+              `Errores: ${errorCount}\n\n` +
+              `Los detalles se muestran en el recuadro rojo abajo.`
             );
             // Mostrar errores en el log rojo
-            this.backendErrors.set(result.errors);
+            if (result.errors && result.errors.length > 0) {
+              this.backendErrors.set(result.errors);
+            }
           } else {
             // Completamente exitosa
             alert(
@@ -1552,6 +1555,8 @@ export class DailyLoadComponent implements OnInit {
               `Archivo: ${result.fileName}\n` +
               `Registros insertados: ${result.insertedRows}`
             );
+            // Limpiar errores anteriores
+            this.backendErrors.set([]);
           }
           // Refrescar historial
           this.loadAutoImportHistory();
@@ -1564,14 +1569,19 @@ export class DailyLoadComponent implements OnInit {
               `El sistema detectó que el contenido es idéntico a uno ya importado.`
             );
           } else {
+            // Mostrar mensaje de error
             alert(
               `❌ Error en la importación\n\n` +
-              `${result.message}\n\n` +
-              `Revisa el log rojo para ver los detalles.`
+              `${result.message}`
             );
-            // Mostrar errores en el log rojo
+
+            // Mostrar detalles en el log rojo
             if (result.errors && result.errors.length > 0) {
+              // Hay errores específicos del backend
               this.backendErrors.set(result.errors);
+            } else if (result.message) {
+              // Si no hay array de errores, mostrar el mensaje en el log rojo
+              this.backendErrors.set([result.message]);
             }
           }
         }

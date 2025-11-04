@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   TypificationCatalog,
@@ -176,7 +177,12 @@ export class TypificationService {
 
   // Tenant Management
   getAllTenants(): Observable<Tenant[]> {
-    return this.http.get<Tenant[]>(`${this.baseUrl}/system-config/tenants`);
+    return this.http.get<any[]>(`${this.baseUrl}/system-config/tenants`).pipe(
+      map(tenants => tenants.map(t => ({
+        ...t,
+        isActive: t.isActive === 1 || t.isActive === true
+      })))
+    );
   }
 
   createTenant(data: {
@@ -190,7 +196,12 @@ export class TypificationService {
     maxConcurrentSessions?: number;
     subscriptionTier?: string;
   }): Observable<Tenant> {
-    return this.http.post<Tenant>(`${this.baseUrl}/system-config/tenants`, data);
+    return this.http.post<any>(`${this.baseUrl}/system-config/tenants`, data).pipe(
+      map(t => ({
+        ...t,
+        isActive: t.isActive === 1 || t.isActive === true
+      }))
+    );
   }
 
   updateTenant(tenantId: number, data: {
@@ -204,7 +215,17 @@ export class TypificationService {
     subscriptionTier?: string;
     isActive?: boolean;
   }): Observable<Tenant> {
-    return this.http.put<Tenant>(`${this.baseUrl}/system-config/tenants/${tenantId}`, data);
+    // Transform isActive boolean to Integer for backend
+    const payload = {
+      ...data,
+      isActive: data.isActive !== undefined ? (data.isActive ? 1 : 0) : undefined
+    };
+    return this.http.put<any>(`${this.baseUrl}/system-config/tenants/${tenantId}`, payload).pipe(
+      map(t => ({
+        ...t,
+        isActive: t.isActive === 1 || t.isActive === true
+      }))
+    );
   }
 
   deleteTenant(tenantId: number): Observable<void> {
