@@ -87,30 +87,58 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
 
         @if (selectedSubPortfolioId > 0 && headersAreSaved()) {
 
-          <!-- Configuración Automática (Collapsible) -->
+          <!-- Sección de Automatización de Cargas -->
           <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4">
-            <button (click)="showAutoConfig = !showAutoConfig"
+            <!-- Encabezado Maestro -->
+            <button (click)="showAutoImportSection = !showAutoImportSection"
                     class="w-full flex items-center justify-between text-left">
               <div class="flex items-center gap-2">
-                <lucide-angular [name]="showAutoConfig ? 'chevron-down' : 'chevron-right'"
-                                [size]="16"
-                                class="text-blue-400">
+                <lucide-angular [name]="showAutoImportSection ? 'chevron-down' : 'chevron-right'"
+                                [size]="18"
+                                class="text-purple-400">
                 </lucide-angular>
-                <lucide-angular name="zap" [size]="16" class="text-blue-400"></lucide-angular>
-                <h3 class="text-sm font-bold text-white">Configuración Automática</h3>
-                <span class="text-xs px-2 py-0.5 rounded"
-                      [class]="autoImportConfig.active ? 'bg-green-900/30 text-green-400' : 'bg-gray-700 text-gray-400'">
-                  {{ autoImportConfig.active ? 'Activa' : 'Inactiva' }}
-                </span>
+                <lucide-angular name="zap" [size]="18" class="text-purple-400"></lucide-angular>
+                <h3 class="text-base font-bold text-white">Automatización de Cargas</h3>
+                @if (autoImportConfig.active) {
+                  <span class="text-xs px-2 py-0.5 bg-green-900/30 text-green-400 rounded animate-pulse">
+                    Activo
+                  </span>
+                } @else {
+                  <span class="text-xs px-2 py-0.5 bg-gray-700 text-gray-400 rounded">
+                    Inactivo
+                  </span>
+                }
+                @if (autoImportHistory().length > 0) {
+                  <span class="text-xs px-2 py-0.5 bg-slate-700 text-gray-300 rounded">
+                    {{ autoImportHistory().length }} cargas
+                  </span>
+                }
               </div>
-              <span class="text-xs text-gray-400">{{ showAutoConfig ? 'Ocultar' : 'Mostrar' }}</span>
+              <span class="text-xs text-gray-400">{{ showAutoImportSection ? 'Ocultar' : 'Mostrar' }}</span>
             </button>
 
-            @if (showAutoConfig) {
-              <div class="mt-4 pt-4 border-t border-slate-700 space-y-3">
-                <p class="text-xs text-gray-400">
-                  Configura el sistema para procesar automáticamente archivos que coincidan con un patrón
-                </p>
+            <!-- Grid de 2 columnas: Configuración Automática + Historial -->
+            @if (showAutoImportSection) {
+              <div class="mt-4 pt-4 border-t border-slate-700">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+
+                  <!-- Configuración Automática -->
+                  <div class="bg-slate-900/50 border border-slate-600 rounded-lg p-4 h-full">
+                <!-- Título de la sección -->
+                <div class="flex items-center gap-2 mb-4 pb-3 border-b border-slate-700">
+                  <lucide-angular name="settings" [size]="16" class="text-blue-400"></lucide-angular>
+                  <h4 class="text-sm font-bold text-white">Configuración</h4>
+                  <span class="text-xs px-2 py-0.5 rounded"
+                        [class]="autoImportConfig.active ? 'bg-green-900/30 text-green-400' : 'bg-gray-700 text-gray-400'">
+                    {{ autoImportConfig.active ? 'Activa' : 'Inactiva' }}
+                  </span>
+                </div>
+
+                <!-- Contenido de configuración -->
+                <div class="space-y-3">
+                  <p class="text-xs text-gray-400">
+                    Configura el sistema para procesar automáticamente archivos que coincidan con un patrón
+                  </p>
 
                 <div class="grid grid-cols-2 gap-3">
                   <!-- Patrón de archivo -->
@@ -125,20 +153,15 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                     <p class="text-xs text-gray-500 mt-0.5">Archivos que contengan este texto</p>
                   </div>
 
-                  <!-- Frecuencia -->
+                  <!-- Hora Programada -->
                   <div>
                     <label class="block text-xs font-semibold text-gray-300 mb-1">
-                      Revisar cada
+                      Hora de carga diaria
                     </label>
-                    <select [(ngModel)]="autoImportConfig.checkFrequencyMinutes"
-                            class="w-full px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
-                      <option [value]="0">5 segundos (Testing)</option>
-                      <option [value]="1">1 minuto</option>
-                      <option [value]="5">5 minutos</option>
-                      <option [value]="15">15 minutos</option>
-                      <option [value]="30">30 minutos</option>
-                      <option [value]="60">1 hora</option>
-                    </select>
+                    <input type="time"
+                           [(ngModel)]="scheduledTimeInput"
+                           class="w-full px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    <p class="text-xs text-gray-500 mt-0.5">Hora exacta para ejecutar (ej: 02:00)</p>
                   </div>
                 </div>
 
@@ -184,12 +207,32 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                         <span class="text-xs text-gray-400">Buscando...</span>
                       </div>
                     } @else if (foundFiles().length > 0) {
-                      <div class="flex items-center justify-between mt-2 p-2 bg-green-900/20 border border-green-700/50 rounded">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                          <lucide-angular name="file-text" [size]="12" class="text-green-400 flex-shrink-0"></lucide-angular>
-                          <span class="text-xs text-white font-semibold truncate">{{ foundFiles()[0].name }}</span>
-                        </div>
-                        <span class="text-xs text-gray-400 ml-2">{{ foundFiles()[0].size }}</span>
+                      <div class="mt-2 space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                        @for (file of foundFiles(); track file.name) {
+                          <div class="flex items-center justify-between p-2 rounded"
+                               [class]="file.processed ? 'bg-gray-900/30 border border-gray-700/40' : 'bg-blue-900/20 border border-blue-700/50'">
+                            <div class="flex items-center gap-2 flex-1 min-w-0">
+                              <lucide-angular [name]="file.processed ? 'check-circle' : 'file-text'"
+                                              [size]="12"
+                                              [class]="file.processed ? 'text-gray-400' : 'text-blue-400'"
+                                              class="flex-shrink-0">
+                              </lucide-angular>
+                              <span class="text-xs font-semibold truncate"
+                                    [class]="file.processed ? 'text-gray-400' : 'text-white'">
+                                {{ file.name }}
+                              </span>
+                              @if (!file.processed) {
+                                <span class="px-1.5 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded">PRÓXIMO</span>
+                              } @else {
+                                <span class="px-1.5 py-0.5 bg-gray-600 text-gray-300 text-[10px] font-bold rounded">PROCESADO</span>
+                              }
+                            </div>
+                            <span class="text-xs ml-2"
+                                  [class]="file.processed ? 'text-gray-500' : 'text-gray-400'">
+                              {{ file.size }}
+                            </span>
+                          </div>
+                        }
                       </div>
                     } @else {
                       <p class="text-xs text-gray-500 mt-2">Click "Buscar" para verificar</p>
@@ -208,98 +251,105 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                       Activar procesamiento automático
                     </label>
                   </div>
-                  <button (click)="saveAutoConfig()"
-                          class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-colors">
-                    Guardar
-                  </button>
+                  <div class="flex gap-2">
+                    <button (click)="triggerManualImport()"
+                            [disabled]="!autoImportConfig.watchDirectory || !autoImportConfig.filePattern"
+                            class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
+                      <lucide-angular name="play" [size]="12"></lucide-angular>
+                      Importar Ahora
+                    </button>
+                    <button (click)="saveAutoConfig()"
+                            class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-colors">
+                      Guardar
+                    </button>
+                  </div>
                 </div>
+                </div>
+                  </div>
+
+                  <!-- Historial de Cargas Automáticas -->
+                  @if (autoImportConfig.active || autoImportHistory().length > 0) {
+                    <div class="bg-slate-900/50 border border-slate-600 rounded-lg p-4 h-full">
+                      <!-- Título de la sección -->
+                      <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
+                        <div class="flex items-center gap-2">
+                          <lucide-angular name="history" [size]="16" class="text-green-400"></lucide-angular>
+                          <h4 class="text-sm font-bold text-white">Historial</h4>
+                          @if (autoImportHistory().length > 0) {
+                            <span class="text-xs px-2 py-0.5 bg-slate-700 text-gray-300 rounded">
+                              {{ autoImportHistory().length }}
+                            </span>
+                          }
+                          @if (autoImportConfig.active) {
+                            <span class="text-xs px-2 py-0.5 bg-green-900/30 text-green-400 rounded animate-pulse">
+                              Monitoreando
+                            </span>
+                          }
+                        </div>
+                        <button (click)="refreshHistory()"
+                                class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs flex items-center gap-1 transition-colors">
+                          <lucide-angular name="refresh-cw" [size]="12"></lucide-angular>
+                          Actualizar
+                        </button>
+                      </div>
+
+                      <!-- Contenido del historial -->
+                      <div>
+                        @if (autoImportHistory().length === 0) {
+                          <div class="text-center py-6 text-gray-500">
+                            <lucide-angular name="inbox" [size]="24" class="mx-auto mb-2 text-gray-600"></lucide-angular>
+                            <p class="text-xs">No hay cargas automáticas registradas aún</p>
+                            @if (autoImportConfig.active) {
+                              <p class="text-xs mt-1">El sistema está monitoreando la carpeta configurada</p>
+                            }
+                          </div>
+                        } @else {
+                          <div class="space-y-2 max-h-96 overflow-y-auto pr-2">
+                            @for (item of autoImportHistory(); track item.id) {
+                              <div [class]="item.status === 'EXITOSO' || item.status === 'EXITOSO_CON_ERRORES' ? 'bg-green-900/10 border-green-700/30' : 'bg-red-900/10 border-red-700/30'"
+                                   class="border rounded-lg p-3">
+                                <div class="flex items-start gap-2">
+                                  <lucide-angular [name]="item.status === 'EXITOSO' || item.status === 'EXITOSO_CON_ERRORES' ? 'check-circle' : 'x-circle'"
+                                                  [size]="14"
+                                                  [class]="item.status === 'EXITOSO' || item.status === 'EXITOSO_CON_ERRORES' ? 'text-green-400' : 'text-red-400'"
+                                                  class="flex-shrink-0 mt-0.5">
+                                  </lucide-angular>
+                                  <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between gap-2">
+                                      <span class="text-xs font-semibold text-white truncate">{{ item.fileName }}</span>
+                                      <span class="text-xs text-gray-400 whitespace-nowrap">{{ formatHistoryDate(item.processedAt) }}</span>
+                                    </div>
+                                    @if (item.status === 'EXITOSO') {
+                                      <p class="text-xs text-green-400 mt-1">
+                                        ✅ {{ item.recordsProcessed }} registros importados exitosamente
+                                      </p>
+                                    } @else if (item.status === 'EXITOSO_CON_ERRORES') {
+                                      <p class="text-xs text-yellow-400 mt-1">
+                                        ⚠️ {{ item.recordsProcessed }} registros importados con errores
+                                      </p>
+                                    } @else {
+                                      <p class="text-xs text-red-400 mt-1">
+                                        ❌ {{ item.errorMessage }}
+                                      </p>
+                                    }
+                                    <p class="text-xs text-gray-500 mt-0.5 truncate" [title]="item.filePath">
+                                      📁 {{ item.filePath }}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+
+                </div>
+                <!-- Fin del Grid de 2 columnas -->
               </div>
             }
           </div>
-
-          <!-- Historial de Cargas Automáticas (Collapsible) -->
-          @if (autoImportConfig.active || autoImportHistory().length > 0) {
-            <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4">
-              <button (click)="showHistory = !showHistory"
-                      class="w-full flex items-center justify-between text-left">
-                <div class="flex items-center gap-2">
-                  <lucide-angular [name]="showHistory ? 'chevron-down' : 'chevron-right'"
-                                  [size]="16"
-                                  class="text-green-400">
-                  </lucide-angular>
-                  <lucide-angular name="history" [size]="16" class="text-green-400"></lucide-angular>
-                  <h3 class="text-sm font-bold text-white">Historial de Cargas Automáticas</h3>
-                  @if (autoImportHistory().length > 0) {
-                    <span class="text-xs px-2 py-0.5 bg-slate-700 text-gray-300 rounded">
-                      {{ autoImportHistory().length }}
-                    </span>
-                  }
-                  @if (autoImportConfig.active) {
-                    <span class="text-xs px-2 py-0.5 bg-green-900/30 text-green-400 rounded animate-pulse">
-                      Monitoreando
-                    </span>
-                  }
-                </div>
-                <div class="flex items-center gap-2">
-                  @if (showHistory) {
-                    <button (click)="refreshHistory(); $event.stopPropagation()"
-                            class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs flex items-center gap-1 transition-colors">
-                      <lucide-angular name="refresh-cw" [size]="12"></lucide-angular>
-                      Actualizar
-                    </button>
-                  }
-                  <span class="text-xs text-gray-400">{{ showHistory ? 'Ocultar' : 'Mostrar' }}</span>
-                </div>
-              </button>
-
-              @if (showHistory) {
-                <div class="mt-3 pt-3 border-t border-slate-700">
-                  @if (autoImportHistory().length === 0) {
-                    <div class="text-center py-6 text-gray-500">
-                      <lucide-angular name="inbox" [size]="24" class="mx-auto mb-2 text-gray-600"></lucide-angular>
-                      <p class="text-xs">No hay cargas automáticas registradas aún</p>
-                      @if (autoImportConfig.active) {
-                        <p class="text-xs mt-1">El sistema está monitoreando la carpeta configurada</p>
-                      }
-                    </div>
-                  } @else {
-                    <div class="space-y-2 max-h-64 overflow-y-auto">
-                      @for (item of autoImportHistory(); track item.id) {
-                        <div [class]="item.status === 'SUCCESS' ? 'bg-green-900/10 border-green-700/30' : 'bg-red-900/10 border-red-700/30'"
-                             class="border rounded-lg p-3">
-                          <div class="flex items-start gap-2">
-                            <lucide-angular [name]="item.status === 'SUCCESS' ? 'check-circle' : 'x-circle'"
-                                            [size]="14"
-                                            [class]="item.status === 'SUCCESS' ? 'text-green-400' : 'text-red-400'"
-                                            class="flex-shrink-0 mt-0.5">
-                            </lucide-angular>
-                            <div class="flex-1 min-w-0">
-                              <div class="flex items-center justify-between gap-2">
-                                <span class="text-xs font-semibold text-white truncate">{{ item.fileName }}</span>
-                                <span class="text-xs text-gray-400 whitespace-nowrap">{{ formatHistoryDate(item.processedAt) }}</span>
-                              </div>
-                              @if (item.status === 'SUCCESS') {
-                                <p class="text-xs text-green-400 mt-1">
-                                  ✅ {{ item.recordsProcessed }} registros importados exitosamente
-                                </p>
-                              } @else {
-                                <p class="text-xs text-red-400 mt-1">
-                                  ❌ {{ item.errorMessage }}
-                                </p>
-                              }
-                              <p class="text-xs text-gray-500 mt-0.5 truncate" [title]="item.filePath">
-                                📁 {{ item.filePath }}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      }
-                    </div>
-                  }
-                </div>
-              }
-            </div>
-          }
 
           <!-- Área de carga de datos -->
           <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
@@ -558,22 +608,21 @@ export class DailyLoadComponent implements OnInit {
   invalidData = signal<{error: string, data: any}[]>([]);
   backendErrors = signal<string[]>([]);
 
-  // Auto import configuration
-  showAutoConfig = false;
-  showHistory = false;
+  // Auto import section (controls both config and history)
+  showAutoImportSection = false;
   autoImportConfig = {
     watchDirectory: '',
     filePattern: '',
-    checkFrequencyMinutes: 15,
     active: false
   };
+  scheduledTimeInput = '02:00'; // Input de hora en formato HH:mm
 
   autoImportHistory = signal<{
     id: number;
     fileName: string;
     filePath: string;
     processedAt: string;
-    status: 'SUCCESS' | 'ERROR';
+    status: 'EXITOSO' | 'EXITOSO_CON_ERRORES' | 'ERROR';
     recordsProcessed: number;
     errorMessage?: string;
   }[]>([]);
@@ -1307,9 +1356,16 @@ export class DailyLoadComponent implements OnInit {
         this.autoImportConfig = {
           watchDirectory: config.watchDirectory || '',
           filePattern: config.filePattern || '',
-          checkFrequencyMinutes: config.checkFrequencyMinutes || 15,
           active: config.active || false
         };
+
+        // Cargar scheduledTime (formato HH:mm:ss del backend)
+        if (config.scheduledTime) {
+          // Convertir de HH:mm:ss a HH:mm para el input type="time"
+          this.scheduledTimeInput = config.scheduledTime.substring(0, 5);
+        } else {
+          this.scheduledTimeInput = '02:00'; // Default
+        }
 
         if (this.autoImportConfig.active) {
           this.loadAutoImportHistory();
@@ -1362,11 +1418,14 @@ export class DailyLoadComponent implements OnInit {
       }
     }
 
+    // Convertir hora de HH:mm a HH:mm:ss para el backend
+    const scheduledTime = this.scheduledTimeInput ? `${this.scheduledTimeInput}:00` : '02:00:00';
+
     const configToSave = {
       watchDirectory: this.autoImportConfig.watchDirectory,
       filePattern: this.autoImportConfig.filePattern,
       subPortfolioId: this.selectedSubPortfolioId,
-      checkFrequencyMinutes: this.autoImportConfig.checkFrequencyMinutes,
+      scheduledTime: scheduledTime,
       active: this.autoImportConfig.active,
       processedDirectory: this.autoImportConfig.watchDirectory + '\\Procesados',
       errorDirectory: this.autoImportConfig.watchDirectory + '\\Errores',
@@ -1375,14 +1434,14 @@ export class DailyLoadComponent implements OnInit {
 
     this.importConfigService.saveConfig(configToSave).subscribe({
       next: (saved) => {
-        const frecuenciaTexto = saved.checkFrequencyMinutes === 0
-          ? '5 segundos (Testing)'
-          : `${saved.checkFrequencyMinutes} minuto${saved.checkFrequencyMinutes === 1 ? '' : 's'}`;
+        const horaProgramada = saved.scheduledTime
+          ? `A las ${saved.scheduledTime.substring(0, 5)} diariamente`
+          : 'Sin hora programada';
 
         alert('✅ Configuración guardada exitosamente.\n\n' +
               `Patrón: ${saved.filePattern}\n` +
               `Carpeta: ${saved.watchDirectory}\n` +
-              `Frecuencia: Cada ${frecuenciaTexto}\n` +
+              `Programación: ${horaProgramada}\n` +
               `Estado: ${saved.active ? 'ACTIVA - El sistema está monitoreando' : 'Inactiva'}`);
 
         if (saved.active) {
@@ -1474,6 +1533,84 @@ export class DailyLoadComponent implements OnInit {
         alert('❌ Error al escanear la carpeta: ' + (error.error?.error || error.message));
         this.scanningFolder.set(false);
         this.foundFiles.set([]);
+      }
+    });
+  }
+
+  triggerManualImport() {
+    if (!this.autoImportConfig.watchDirectory || !this.autoImportConfig.filePattern) {
+      alert('⚠️ Configura la carpeta y el patrón de archivo primero');
+      return;
+    }
+
+    const confirmImport = confirm(
+      '¿Deseas ejecutar la importación ahora?\n\n' +
+      'Se procesará el próximo archivo disponible en la carpeta configurada.'
+    );
+
+    if (!confirmImport) {
+      return;
+    }
+
+    // Mostrar loading
+    this.backendErrors.set([]);
+    console.log('🚀 Ejecutando importación manual...');
+
+    this.importConfigService.triggerManualImport().subscribe({
+      next: (result) => {
+        console.log('Resultado de importación manual:', result);
+
+        if (result.success) {
+          // Importación exitosa
+          if (result.hasErrors) {
+            // Exitosa pero con errores
+            alert(
+              `⚠️ Importación completada con advertencias\n\n` +
+              `Archivo: ${result.fileName}\n` +
+              `Registros insertados: ${result.insertedRows}\n` +
+              `Errores: ${result.errors.length}\n\n` +
+              `Revisa el log rojo para ver los detalles.`
+            );
+            // Mostrar errores en el log rojo
+            this.backendErrors.set(result.errors);
+          } else {
+            // Completamente exitosa
+            alert(
+              `✅ Importación exitosa\n\n` +
+              `Archivo: ${result.fileName}\n` +
+              `Registros insertados: ${result.insertedRows}`
+            );
+          }
+          // Refrescar historial
+          this.loadAutoImportHistory();
+        } else {
+          // Importación fallida
+          if (result.duplicate) {
+            alert(
+              `ℹ️ Archivo duplicado\n\n` +
+              `El archivo "${result.fileName}" ya fue procesado anteriormente.\n\n` +
+              `El sistema detectó que el contenido es idéntico a uno ya importado.`
+            );
+          } else {
+            alert(
+              `❌ Error en la importación\n\n` +
+              `${result.message}\n\n` +
+              `Revisa el log rojo para ver los detalles.`
+            );
+            // Mostrar errores en el log rojo
+            if (result.errors && result.errors.length > 0) {
+              this.backendErrors.set(result.errors);
+            }
+          }
+        }
+      },
+      error: (error) => {
+        console.error('Error al ejecutar importación manual:', error);
+        alert(
+          `❌ Error al ejecutar importación\n\n` +
+          `${error.error?.message || error.message}\n\n` +
+          `Verifica que la configuración esté correcta.`
+        );
       }
     });
   }

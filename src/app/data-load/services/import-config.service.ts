@@ -7,7 +7,7 @@ export interface ImportConfig {
   watchDirectory: string;
   filePattern: string;
   subPortfolioId: number;
-  checkFrequencyMinutes: number;
+  scheduledTime: string; // Hora programada en formato HH:mm:ss (ej: "02:00:00")
   active: boolean;
   processedDirectory: string;
   errorDirectory: string;
@@ -20,7 +20,7 @@ export interface ImportHistoryItem {
   fileName: string;
   filePath: string;
   processedAt: string;
-  status: 'SUCCESS' | 'ERROR';
+  status: 'EXITOSO' | 'EXITOSO_CON_ERRORES' | 'ERROR';
   recordsProcessed: number;
   errorMessage?: string;
 }
@@ -79,5 +79,9 @@ export class ImportConfigService {
       subPortfolioId,
       loadType
     });
+  }
+
+  triggerManualImport(): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/trigger-import`, {});
   }
 }

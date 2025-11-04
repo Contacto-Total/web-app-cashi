@@ -115,6 +115,38 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
               </div>
             </div>
 
+            <!-- Botones de acción (arriba de la tabla) -->
+            @if (importedData().length > 0) {
+              <div class="flex justify-between items-center mb-3">
+                <div class="text-sm text-gray-400">
+                  @if (backendErrors().length > 0) {
+                    <span class="text-red-400 font-semibold">La importación falló. Corrija los errores e intente nuevamente.</span>
+                  } @else if (validData().length > 0) {
+                    <span class="text-green-400 font-semibold">{{ validData().length }} registro(s) </span>
+                    <span class="text-gray-300">listo(s) para importar</span>
+                  } @else {
+                    <span class="text-red-400 font-semibold">No hay registros válidos para importar</span>
+                  }
+                </div>
+                <div class="flex gap-2">
+                  <button
+                    (click)="clearImportedData()"
+                    class="px-3 py-1.5 bg-slate-700 text-white rounded hover:bg-slate-600 transition-all font-medium text-sm flex items-center gap-1.5 cursor-pointer">
+                    <lucide-angular name="x" [size]="14"></lucide-angular>
+                    Cancelar
+                  </button>
+                  @if (validData().length > 0 && backendErrors().length === 0) {
+                    <button
+                      (click)="confirmImport()"
+                      class="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-all font-medium text-sm flex items-center gap-1.5 cursor-pointer">
+                      <lucide-angular name="check" [size]="14"></lucide-angular>
+                      Confirmar Importación
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+
             <!-- Tabla de previsualización estilo MySQL Workbench -->
             <div class="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden">
               <div class="px-4 py-2 bg-slate-800 border-b border-slate-700">
@@ -272,33 +304,6 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                     </div>
                   </div>
                 }
-
-                <!-- Botones de acción -->
-                <div class="flex justify-between items-center">
-                  <div class="text-sm text-gray-400">
-                    @if (backendErrors().length > 0) {
-                      <span class="text-red-400">La importación falló. Corrija los errores e intente nuevamente.</span>
-                    } @else if (validData().length > 0) {
-                      <span class="text-green-400">{{ validData().length }} registro(s)</span> listo(s) para importar
-                    } @else {
-                      <span class="text-red-400">No hay registros válidos para importar</span>
-                    }
-                  </div>
-                  <div class="flex gap-3">
-                    <button
-                      (click)="clearImportedData()"
-                      class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-all font-medium text-sm">
-                      Cancelar
-                    </button>
-                    @if (validData().length > 0 && backendErrors().length === 0) {
-                      <button
-                        (click)="confirmImport()"
-                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium text-sm">
-                        Confirmar Importación
-                      </button>
-                    }
-                  </div>
-                </div>
               </div>
             }
           </div>
