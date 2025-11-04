@@ -1,7 +1,7 @@
 import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
-import { LucideAngularModule, Activity, AlertCircle, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bell, BookOpen, Briefcase, Building, Building2, Calendar, Check, CheckCircle, ChevronDown, ChevronRight, ChevronUp, Circle, Clock, Code, Copy, CreditCard, Database, DollarSign, Download, Edit, Eye, EyeOff, ExternalLink, FilePlus, FileText, Filter, Flag, Folder, FolderOpen, FolderTree, FolderX, FunctionSquare, GitBranch, Glasses, HandMetal, HardDrive, History, Home, Image, Inbox, Info, Key, LayoutDashboard, List, Loader, Mail, Map, MapPin, MessageSquare, Moon, Music, Package, Phone, PhoneCall, PhoneIncoming, PhoneOff, Plus, PlusCircle, Presentation, RefreshCw, Rocket, Save, Search, SearchX, Settings, Shield, ShieldBan, ShieldCheck, ShieldOff, ShoppingCart, Smile, Sparkles, Star, Sun, Table, Table2, Tag, Trash2, TrendingUp, Type, User, UserCircle, UserCog, Users, UserX, Video, Wallet, X, XCircle, Zap } from 'lucide-angular';
+import { LucideAngularModule, Activity, AlertCircle, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bell, BookOpen, Briefcase, Building, Building2, Calendar, Check, CheckCircle, ChevronDown, ChevronRight, ChevronUp, Circle, Clock, Code, Copy, CreditCard, Database, DollarSign, Download, Edit, Eye, EyeOff, ExternalLink, FilePlus, FileText, Filter, Flag, Folder, FolderOpen, FolderSearch, FolderTree, FolderX, FunctionSquare, GitBranch, Glasses, HandMetal, HardDrive, History, Home, Image, Inbox, Info, Key, LayoutDashboard, List, Loader, Mail, Map, MapPin, MessageSquare, Moon, Music, Package, Phone, PhoneCall, PhoneIncoming, PhoneOff, Play, Plus, PlusCircle, Presentation, RefreshCw, Rocket, Save, Search, SearchX, Settings, Shield, ShieldBan, ShieldCheck, ShieldOff, ShoppingCart, Smile, Sparkles, Star, Sun, Table, Table2, Tag, Trash2, TrendingUp, Type, User, UserCircle, UserCog, Users, UserX, Video, Wallet, X, XCircle, Zap } from 'lucide-angular';
 
 import { routes } from './app.routes';
 
@@ -48,6 +48,7 @@ export const appConfig: ApplicationConfig = {
         Flag,
         Folder,
         FolderOpen,
+        FolderSearch,
         FolderTree,
         FolderX,
         FunctionSquare,
@@ -75,6 +76,7 @@ export const appConfig: ApplicationConfig = {
         PhoneCall,
         PhoneIncoming,
         PhoneOff,
+        Play,
         Plus,
         PlusCircle,
         Presentation,

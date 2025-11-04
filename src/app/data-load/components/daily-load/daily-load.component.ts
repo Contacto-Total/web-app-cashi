@@ -9,11 +9,12 @@ import { ImportConfigService } from '../../services/import-config.service';
 import { HeaderConfiguration } from '../../../maintenance/models/header-configuration.model';
 import { SubPortfolio, Portfolio } from '../../../maintenance/models/portfolio.model';
 import { Tenant } from '../../../maintenance/models/tenant.model';
+import { FolderBrowserModalComponent } from '../folder-browser-modal/folder-browser-modal.component';
 
 @Component({
   selector: 'app-daily-load',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, FolderBrowserModalComponent],
   template: `
     <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
       <div class="max-w-7xl mx-auto">
@@ -175,18 +176,13 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                            [(ngModel)]="autoImportConfig.watchDirectory"
                            placeholder="Ej: G:\\Mi unidad\\Cashi\\Cargas Diarias"
                            class="flex-1 px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-white text-xs placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                    <label class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs font-semibold cursor-pointer flex items-center gap-1 transition-colors">
-                      <lucide-angular name="folder-open" [size]="12"></lucide-angular>
-                      Examinar
-                      <input type="file"
-                             webkitdirectory
-                             directory
-                             multiple
-                             (change)="onFolderSelected($event)"
-                             class="hidden">
-                    </label>
+                    <button (click)="showFolderBrowser.set(true)"
+                            class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold cursor-pointer flex items-center gap-1 transition-colors">
+                      <lucide-angular name="folder-search" [size]="12"></lucide-angular>
+                      Explorar
+                    </button>
                   </div>
-                  <p class="text-xs text-gray-500 mt-0.5">Escribe la ruta o examina para seleccionarla</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Explora las carpetas del servidor o escribe la ruta manualmente</p>
                 </div>
 
                 <!-- Archivo a procesar -->
@@ -583,6 +579,14 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
           </div>
         }
       </div>
+
+      <!-- Folder Browser Modal -->
+      @if (showFolderBrowser()) {
+        <app-folder-browser-modal
+          (folderSelected)="onFolderSelected($event)"
+          (closed)="showFolderBrowser.set(false)">
+        </app-folder-browser-modal>
+      }
     </div>
   `,
   styles: [`
@@ -629,6 +633,7 @@ export class DailyLoadComponent implements OnInit {
 
   scanningFolder = signal(false);
   foundFiles = signal<{ name: string; size: string; modifiedDate: Date; processed: boolean }[]>([]);
+  showFolderBrowser = signal(false);
 
   constructor(
     private tenantService: TenantService,
@@ -1317,39 +1322,6 @@ export class DailyLoadComponent implements OnInit {
     });
   }
 
-  onFolderSelected(event: any) {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      // Obtener la ruta del primer archivo y extraer el directorio
-      const firstFile = files[0];
-      const fullPath = firstFile.webkitRelativePath || firstFile.name;
-
-      // Extraer solo el nombre de la carpeta principal
-      const folderName = fullPath.split('/')[0];
-
-      // En navegadores, no podemos obtener la ruta completa por seguridad
-      // Mostrar un mensaje al usuario
-      const confirmed = confirm(
-        `Has seleccionado la carpeta: "${folderName}"\n\n` +
-        `Por motivos de seguridad del navegador, necesitas escribir la ruta completa manualmente.\n\n` +
-        `Ejemplo: G:\\Mi unidad\\Cashi\\Cargas Diarias\\${folderName}\n\n` +
-        `¿Deseas copiar el nombre de la carpeta para usarlo?`
-      );
-
-      if (confirmed) {
-        // Si el usuario ya tiene algo escrito, agregar el folder al final
-        if (this.autoImportConfig.watchDirectory) {
-          this.autoImportConfig.watchDirectory += `\\${folderName}`;
-        } else {
-          this.autoImportConfig.watchDirectory = folderName;
-        }
-      }
-    }
-
-    // Limpiar el input
-    event.target.value = '';
-  }
-
   loadAutoConfig() {
     this.importConfigService.getConfig().subscribe({
       next: (config) => {
@@ -1634,5 +1606,11 @@ export class DailyLoadComponent implements OnInit {
         minute: '2-digit'
       });
     }
+  }
+
+  onFolderSelected(path: string) {
+    this.autoImportConfig.watchDirectory = path;
+    this.showFolderBrowser.set(false);
+    console.log('Carpeta seleccionada:', path);
   }
 }
