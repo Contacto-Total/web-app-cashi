@@ -2010,22 +2010,40 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Calcula una fecha segura sumando meses, evitando overflow de días
-   * Por ejemplo: 30 de enero + 1 mes = 28 de febrero (no 2 de marzo)
+   * Calcula la fecha de una cuota basándose en la periodicidad seleccionada
+   * Cuota 1 = hoy, Cuota 2 = hoy + intervalo, etc.
    */
   calcularFechaCuota(numeroCuota: number): string {
     const today = new Date();
-    const targetDate = new Date(today.getFullYear(), today.getMonth() + (numeroCuota - 1), today.getDate());
 
-    // Si el día cambió (overflow), usar el último día del mes anterior
-    if (targetDate.getDate() !== today.getDate()) {
-      targetDate.setDate(0); // Último día del mes anterior
-    }
+    // Obtener días de intervalo según la periodicidad
+    const diasIntervalo = this.getDiasPeriodicidad();
+
+    // Calcular fecha: hoy + (numeroCuota - 1) * intervalo
+    const diasASumar = (numeroCuota - 1) * diasIntervalo;
+    const targetDate = new Date(today.getTime() + diasASumar * 24 * 60 * 60 * 1000);
 
     const year = targetDate.getFullYear();
     const month = String(targetDate.getMonth() + 1).padStart(2, '0');
     const day = String(targetDate.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * Obtiene los días de intervalo según la periodicidad seleccionada
+   */
+  getDiasPeriodicidad(): number {
+    const periodicidad = this.scheduleForm.periodicidad?.toLowerCase() || '';
+
+    if (periodicidad.includes('semanal')) return 7;
+    if (periodicidad.includes('quincenal')) return 15;
+    if (periodicidad.includes('mensual')) return 30;
+    if (periodicidad.includes('45')) return 45;
+    if (periodicidad.includes('bimestral')) return 60;
+    if (periodicidad.includes('trimestral')) return 90;
+
+    // Por defecto: semanal (7 días)
+    return 7;
   }
 
   loadMontoNegociadoFromOutput(fieldId: string) {
