@@ -1942,12 +1942,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const currentLength = this.scheduleForm.cuotas.length;
 
     if (numInstallments > currentLength) {
-      // Add missing installments
+      // Add missing installments with default dates
       for (let i = currentLength + 1; i <= numInstallments; i++) {
         this.scheduleForm.cuotas.push({
           numero: i,
           monto: '',
-          fechaVencimiento: ''
+          fechaVencimiento: this.calcularFechaCuota(i)
         });
       }
     } else if (numInstallments < currentLength) {
@@ -1967,13 +1967,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       return;
     }
 
-    // Generar array de cuotas vacías
+    // Generar array de cuotas con fechas por defecto
     this.scheduleForm.cuotas = [];
     for (let i = 1; i <= numCuotas; i++) {
       this.scheduleForm.cuotas.push({
         numero: i,
         monto: '',
-        fechaVencimiento: ''
+        fechaVencimiento: this.calcularFechaCuota(i)
       });
     }
   }
@@ -1983,7 +1983,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.scheduleForm.cuotas.push({
       numero: nextNumber,
       monto: '',
-      fechaVencimiento: ''
+      fechaVencimiento: this.calcularFechaCuota(nextNumber)
     });
     // Actualizar el número de cuotas
     this.scheduleForm.numeroCuotas = nextNumber.toString();
@@ -2006,6 +2006,25 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * Calcula una fecha segura sumando meses, evitando overflow de días
+   * Por ejemplo: 30 de enero + 1 mes = 28 de febrero (no 2 de marzo)
+   */
+  calcularFechaCuota(numeroCuota: number): string {
+    const today = new Date();
+    const targetDate = new Date(today.getFullYear(), today.getMonth() + (numeroCuota - 1), today.getDate());
+
+    // Si el día cambió (overflow), usar el último día del mes anterior
+    if (targetDate.getDate() !== today.getDate()) {
+      targetDate.setDate(0); // Último día del mes anterior
+    }
+
+    const year = targetDate.getFullYear();
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const day = String(targetDate.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
 
